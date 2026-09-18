@@ -1,0 +1,39 @@
+{
+  "name": "fullest-of-stacks",
+  "version": "0.1.0",
+  "description": "Scaffold a full-stack Next.js app with shadcn, Prisma 8, Better Auth, Vitest, Zod, ESLint, and Prettier.",
+  "type": "module",
+  "bin": {
+    "fullest-of-stacks": "./bin/fullest-of-stacks.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node ./bin/fullest-of-stacks.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "keywords": [
+    "nextjs",
+    "shadcn",
+    "prisma",
+    "better-auth",
+    "vitest",
+    "scaffold",
+    "starter"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^1.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
+}
