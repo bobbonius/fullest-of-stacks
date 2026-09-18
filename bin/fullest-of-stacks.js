@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -15,14 +16,18 @@ if (Number.isNaN(major) || major < 24) {
 const here = path.dirname(fileURLToPath(import.meta.url))
 const cli = path.join(here, '../src/cli.ts')
 
-const child = spawn(
-  process.execPath,
-  ['--experimental-strip-types', '--no-warnings', cli, ...process.argv.slice(2)],
-  {
-    stdio: 'inherit',
-    env: process.env,
-  }
-)
+let tsxCli
+try {
+  tsxCli = createRequire(import.meta.url).resolve('tsx/cli')
+} catch {
+  console.error('fullest-of-stacks could not find tsx. Reinstall the package.')
+  process.exit(1)
+}
+
+const child = spawn(process.execPath, [tsxCli, cli, ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  env: process.env,
+})
 
 child.on('exit', code => {
   process.exit(code ?? 1)
