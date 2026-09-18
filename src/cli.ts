@@ -80,8 +80,8 @@ Scaffold a full-stack Next.js app using the official CLIs for Next.js, shadcn, a
 Requires Node.js 24+.
 
 ${pc.bold('Usage')}
-  npx github:<user>/fullest-of-stacks [name] [options]
-  pnpm dlx github:<user>/fullest-of-stacks [name]
+  npx github:bobbonius/fullest-of-stacks [name] [options]
+  pnpm dlx github:bobbonius/fullest-of-stacks [name]
 
 ${pc.bold('Options')}
   --yes, -y       Recommended answers for Next.js, shadcn, and Prisma (still asks Postgres port and database name)

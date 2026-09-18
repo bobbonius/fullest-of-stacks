@@ -12,11 +12,9 @@ into `.env.local`. `--yes` still asks for those; it only applies recommended ans
 
 ## Usage
 
-After this repo is on GitHub:
-
 ```bash
-npx github:<your-user>/fullest-of-stacks
-npx github:<your-user>/fullest-of-stacks my-app
+npx github:bobbonius/fullest-of-stacks
+npx github:bobbonius/fullest-of-stacks my-app
 ```
 
 Locally, from this directory:
