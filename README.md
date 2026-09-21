@@ -124,6 +124,7 @@ cd my-app
 pnpm db:init
 pnpm db:seed
 pnpm db:reset   # optional: wipe local data, recreate tables, and re-seed
+pnpm db:studio  # browse tables in Prisma Studio
 pnpm dev
 pnpm test
 pnpm test:coverage

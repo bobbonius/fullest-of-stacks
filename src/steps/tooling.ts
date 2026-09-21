@@ -78,6 +78,7 @@ export function writeToolingConfigs(ctx: ProjectContext) {
     'db:init': 'prisma db init',
     'db:seed': `tsx ${seedFile}`,
     'db:reset': `tsx ${resetFile} && prisma db init && tsx ${seedFile}`,
+    'db:studio': 'prisma studio',
   })
   pkg.engines = { ...pkg.engines, node: '>=24' }
 

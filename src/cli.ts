@@ -259,6 +259,7 @@ async function main() {
       `${ctx.packageManager} db:init`,
       `${ctx.packageManager} db:seed`,
       `${ctx.packageManager} db:reset   # optional: wipe, recreate, and re-seed`,
+      `${ctx.packageManager} db:studio  # browse tables`,
       `${ctx.packageManager} dev`,
       `${ctx.packageManager} test`,
       `${ctx.packageManager} test:coverage`,

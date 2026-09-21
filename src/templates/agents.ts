@@ -61,7 +61,7 @@ This is **not** Prisma 7. There is no \`PrismaClient\`, \`findMany\`, or \`prism
 - Primary keys are CUID2 values stored as \`text\` (\`@default(cuid(2))\`), so they match Better Auth. Prisma generates them on create; Better Auth uses the same generator via \`advanced.database.generateId\`. Do not use \`field.id.cuid2()\` — that maps to \`character(24)\`, which \`db init\` cannot alter from existing \`text\` columns.
 - Auth \`email\` / \`session.token\` uniqueness is a unique index (\`user_email_key\`, \`session_token_key\`), not \`field.text().unique()\`. Better Auth creates indexes; Prisma unique constraints reuse those names and \`db init\` then fails.
 - After contract changes: \`prisma contract emit\`, then \`{{packageManager}} db:init\` or \`prisma db update\`
-- Database scripts: \`{{packageManager}} db:init\` (create tables), \`{{packageManager}} db:seed\` (homepage posts), \`{{packageManager}} db:reset\` (drop public schema, recreate tables, re-seed).
+- Database scripts: \`{{packageManager}} db:init\` (create tables), \`{{packageManager}} db:seed\` (homepage posts), \`{{packageManager}} db:reset\` (drop public schema, recreate tables, re-seed), \`{{packageManager}} db:studio\` (Prisma Studio).
 - \`DATABASE_URL\` is written at scaffold time from the CLI Postgres port and database name: \`{{databaseUrl}}\`.
 - Do not add Prisma agent skill files. \`prisma.config.ts\` disables the skills check on purpose.
 

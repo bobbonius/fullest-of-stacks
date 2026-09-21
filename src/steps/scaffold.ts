@@ -285,6 +285,12 @@ To wipe local data, recreate tables, and re-seed:
 ${ctx.packageManager} db:reset
 \`\`\`
 
+Browse tables in Prisma Studio:
+
+\`\`\`bash
+${ctx.packageManager} db:studio
+\`\`\`
+
 3. Run the app:
 
 \`\`\`bash
