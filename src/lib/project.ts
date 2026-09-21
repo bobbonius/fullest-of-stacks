@@ -62,14 +62,8 @@ export function detectPackageManager(projectDir: string, fallback: PackageManage
 }
 
 function detectAlias(projectDir: string, srcDir: boolean) {
-  const componentsPath = path.join(projectDir, 'components.json')
-  if (exists(componentsPath)) {
-    const components = readJson<ComponentsJson>(componentsPath)
-    const utils = components.aliases?.utils
-    if (utils?.startsWith('~/')) return '~'
-    if (utils?.startsWith('@/')) return '@'
-  }
-
+  // Prefer tsconfig — that is the create-next-app import-alias choice.
+  // shadcn init often writes @/ into components.json even when the app uses ~/.
   const tsconfigPath = firstExisting([
     path.join(projectDir, 'tsconfig.json'),
     path.join(projectDir, 'tsconfig.app.json'),
@@ -80,6 +74,14 @@ function detectAlias(projectDir: string, srcDir: boolean) {
     const paths = tsconfig.compilerOptions?.paths ?? {}
     if (paths['~/*']) return '~'
     if (paths['@/*']) return '@'
+  }
+
+  const componentsPath = path.join(projectDir, 'components.json')
+  if (exists(componentsPath)) {
+    const components = readJson<ComponentsJson>(componentsPath)
+    const utils = components.aliases?.utils
+    if (utils?.startsWith('~/')) return '~'
+    if (utils?.startsWith('@/')) return '@'
   }
 
   return srcDir ? '~' : '@'
