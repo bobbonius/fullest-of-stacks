@@ -245,7 +245,7 @@ const config = [
           paths: [
             {
               name: '@prisma/client',
-              message: 'Prisma 8 uses db.orm from shared/lib/db, not PrismaClient.',
+              message: 'Prisma 8 uses db.orm from shared/libs/database/db, not PrismaClient.',
             },
             {
               name: 'better-auth/adapters/prisma',
@@ -333,7 +333,7 @@ const config = [
   },
 
   {
-    files: ['**/shared/lib/env.ts', '**/lib/env.ts'],
+    files: ['**/shared/libs/env/env.ts', '**/lib/env.ts'],
     rules: {
       'n/no-process-env': 'off',
     },

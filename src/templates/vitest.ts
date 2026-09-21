@@ -30,8 +30,7 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: [
         '${root}app/**/*.{ts,tsx}',
-        '${root}shared/lib/**/*.{ts,tsx}',
-        '${root}shared/utils/**/*.{ts,tsx}',
+        '${root}shared/libs/**/*.{ts,tsx}',
         '${root}prisma/seed.ts',
         '${root}prisma/reset.ts',
       ],
@@ -43,10 +42,10 @@ export default defineConfig({
         '${root}prisma/db.ts',
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 70,
-        statements: 80,
+        lines: 90,
+        functions: 90,
+        branches: 90,
+        statements: 90,
       },
     },
   },
@@ -60,9 +59,14 @@ export default defineConfig({
 }
 
 export const vitestSetup = `import '@testing-library/jest-dom/vitest'
+import { cleanup } from '@testing-library/react'
 
 import { createElement, type ReactNode } from 'react'
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
+
+afterEach(() => {
+  cleanup()
+})
 
 vi.mock('next/link', () => ({
   default: ({

@@ -53,9 +53,9 @@ export function relocateSharedCode(ctx: ProjectContext) {
     components.aliases = {
       ...components.aliases,
       components: `${prefix}/components`,
-      utils: `${prefix}/lib/utils`,
+      utils: `${prefix}/libs/utils`,
       ui: `${prefix}/components/ui`,
-      lib: `${prefix}/lib`,
+      lib: `${prefix}/libs`,
       hooks: `${prefix}/hooks`,
     }
     writeJson(componentsPath, components)
@@ -64,17 +64,23 @@ export function relocateSharedCode(ctx: ProjectContext) {
   const srcRoot = ctx.srcRoot === '.' ? ctx.projectDir : path.join(ctx.projectDir, ctx.srcRoot)
   const sharedRoot = path.join(ctx.projectDir, ctx.sharedRoot)
 
-  ensureDir(path.join(sharedRoot, 'lib'))
-  ensureDir(path.join(sharedRoot, 'utils'))
+  ensureDir(path.join(sharedRoot, 'libs'))
+  ensureDir(path.join(sharedRoot, 'libs/utils'))
   ensureDir(path.join(sharedRoot, 'hooks'))
 
-  movePath(path.join(srcRoot, 'lib/utils.ts'), path.join(sharedRoot, 'lib/utils.ts'))
-  movePath(path.join(srcRoot, 'lib/utils.js'), path.join(sharedRoot, 'lib/utils.ts'))
+  movePath(path.join(srcRoot, 'lib/utils.ts'), path.join(sharedRoot, 'libs/utils/index.ts'))
+  movePath(path.join(srcRoot, 'lib/utils.js'), path.join(sharedRoot, 'libs/utils/index.ts'))
   movePath(path.join(srcRoot, 'components'), path.join(sharedRoot, 'components'))
   movePath(path.join(srcRoot, 'hooks'), path.join(sharedRoot, 'hooks'))
 
+  // Older scaffolds put shadcn utils under shared/lib or shared/utils.
+  movePath(path.join(sharedRoot, 'lib/utils.ts'), path.join(sharedRoot, 'libs/utils/index.ts'))
+  movePath(path.join(sharedRoot, 'utils/slugify.ts'), path.join(sharedRoot, 'libs/utils/slugify.ts'))
+
   ensureDir(path.join(sharedRoot, 'components/ui'))
   removeIfEmpty(path.join(srcRoot, 'lib'))
+  removeIfEmpty(path.join(sharedRoot, 'lib'))
+  removeIfEmpty(path.join(sharedRoot, 'utils'))
   removeIfEmpty(path.join(srcRoot, 'components'))
   removeIfEmpty(path.join(srcRoot, 'hooks'))
 }

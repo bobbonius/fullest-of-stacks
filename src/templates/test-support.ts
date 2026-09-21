@@ -1,8 +1,9 @@
 import type { TemplateContext } from '../lib/template.ts'
+import { t } from '../lib/template.ts'
 
-export function testSupportFiles(_ctx: TemplateContext) {
+export function testSupportFiles(ctx: TemplateContext) {
   return {
-    'test/factories/index.ts': factories(),
+    'test/factories/index.ts': factories(ctx),
     'test/mocks/db.ts': dbMock(),
     'test/mocks/session.ts': sessionMock(),
     'test/mocks/navigation.ts': navigationMock(),
@@ -10,26 +11,14 @@ export function testSupportFiles(_ctx: TemplateContext) {
   } satisfies Record<string, string>
 }
 
-function factories() {
-  return `import { factory, seq } from '@factory-js/factory'
+function factories(ctx: TemplateContext) {
+  return t(
+    `import { factory, seq } from '@factory-js/factory'
 
-interface User {
-  id: string
-  name: string
-  email: string
-}
+import type { Post, User } from '{{libImport}}/database/models'
 
-interface Session {
+interface AuthSession {
   user: User
-}
-
-interface Post {
-  id: string
-  title: string
-  body: string
-  slug: string
-  published: boolean
-  authorId: string
 }
 
 interface MagicLinkValues {
@@ -47,11 +36,15 @@ export const userFactory = factory.define<User>({
     id: seq(1, (n: number): string => \`user_\${n}\`),
     name: () => 'Ada Lovelace',
     email: seq(1, (n: number): string => \`ada\${n}@example.com\`),
+    emailVerified: () => false,
+    image: () => null,
+    createdAt: () => '2024-01-01 00:00:00',
+    updatedAt: () => '2024-01-01 00:00:00',
   },
   vars: {},
 })
 
-export const sessionFactory = factory.define<Session>({
+export const sessionFactory = factory.define<AuthSession>({
   props: {
     user: async () => userFactory.build(),
   },
@@ -66,6 +59,8 @@ export const postFactory = factory.define<Post>({
     slug: () => 'hello-stacks',
     published: () => true,
     authorId: () => 'user_1',
+    createdAt: () => '2024-01-01 00:00:00',
+    updatedAt: () => '2024-01-01 00:00:00',
   },
   vars: {},
 })
@@ -92,7 +87,9 @@ export const postInputFactory = factory.define<PostInput>({
     },
   },
 })
-`
+`,
+    ctx
+  )
 }
 
 function dbMock() {

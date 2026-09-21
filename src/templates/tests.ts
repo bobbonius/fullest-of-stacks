@@ -25,12 +25,13 @@ export function generatedTests(ctx: TemplateContext) {
     'app/api/health/route.test.ts': healthRouteTest(),
     'app/api/posts/route.test.ts': postsApiTest(ctx),
     'app/api/auth/[...all]/route.test.ts': authRouteTest(ctx),
-    'shared/lib/auth.test.ts': authServerTest(),
-    'shared/lib/auth-client.test.ts': authClientTest(),
-    'shared/lib/dev-magic-link.test.ts': devMagicLinkTest(),
-    'shared/lib/server/get-session.test.ts': getSessionTest(ctx),
-    'shared/lib/db.test.ts': dbTest(ctx),
-    'shared/lib/env.test.ts': envTest(),
+    'shared/libs/auth/auth.test.ts': authServerTest(ctx),
+    'shared/libs/auth/auth-client.test.ts': authClientTest(ctx),
+    'shared/libs/magic-link/dev-magic-link.test.ts': devMagicLinkTest(),
+    'shared/libs/server/get-session.test.ts': getSessionTest(ctx),
+    'shared/libs/database/db.test.ts': dbTest(ctx),
+    'shared/libs/database/db-error.test.ts': dbErrorTest(),
+    'shared/libs/env/env.test.ts': envTest(),
     'prisma/seed.test.ts': seedTest(ctx),
     'prisma/reset.test.ts': resetTest(ctx),
   } satisfies Record<string, string>
@@ -106,7 +107,7 @@ describe('HomePage', () => {
 
     render(await HomePage())
 
-    expect(screen.getByRole('link', { name: /sign in with a magic link/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /sign in with a magic link/i })).toHaveAttribute(
       'href',
       '/login'
     )
@@ -119,7 +120,7 @@ describe('HomePage', () => {
     render(await HomePage())
 
     expect(screen.getByText(\`Signed in as \${session.user.name}.\`)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open dashboard/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /open dashboard/i })).toHaveAttribute(
       'href',
       '/dashboard'
     )
@@ -150,7 +151,7 @@ import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import { getPublishedPosts } from './get-published-posts'
 
-vi.mock('{{libImport}}/db', async () => {
+vi.mock('{{libImport}}/database/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
@@ -177,6 +178,13 @@ describe('getPublishedPosts', () => {
       posts: [],
       setupError: expect.stringMatching(/db:init/i),
     })
+  })
+
+  test('rethrows unexpected database errors', async () => {
+    const error = new Error('permission denied')
+    postQuery.all.mockRejectedValue(error)
+
+    await expect(getPublishedPosts()).rejects.toThrow(error)
   })
 })
 `,
@@ -364,26 +372,28 @@ import { magicLinkValuesFactory } from '{{importPrefix}}test/factories'
 
 import { requestMagicLink } from './request-magic-link'
 
-const { signInMagicLink, headers, takeLastMagicLink } = vi.hoisted(() => ({
+const { signInMagicLink, headers, takeLastMagicLink, envState } = vi.hoisted(() => ({
   signInMagicLink: vi.fn(),
   headers: vi.fn(),
   takeLastMagicLink: vi.fn(),
+  envState: { nodeEnv: 'test' as string },
 }))
 
 vi.mock('next/headers', () => ({ headers }))
-vi.mock('{{libImport}}/auth', () => ({
+vi.mock('{{libImport}}/auth/auth', () => ({
   auth: { api: { signInMagicLink } },
 }))
-vi.mock('{{libImport}}/dev-magic-link', () => ({
-  takeLastMagicLink,
+vi.mock('{{libImport}}/env/env', () => ({
+  env: envState,
 }))
-vi.mock('{{libImport}}/env', () => ({
-  env: { nodeEnv: 'test' },
+vi.mock('{{libImport}}/magic-link/dev-magic-link', () => ({
+  takeLastMagicLink,
 }))
 
 describe('requestMagicLink', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    envState.nodeEnv = 'test'
     headers.mockResolvedValue(new Headers())
   })
 
@@ -408,6 +418,24 @@ describe('requestMagicLink', () => {
         callbackURL: '/dashboard',
       },
       headers: expect.any(Headers),
+    })
+  })
+
+  test('hides the magic link in production', async () => {
+    const values = await magicLinkValuesFactory.build()
+    envState.nodeEnv = 'production'
+    signInMagicLink.mockResolvedValue({})
+
+    await expect(requestMagicLink({ data: values })).resolves.toEqual({})
+    expect(takeLastMagicLink).not.toHaveBeenCalled()
+  })
+
+  test('returns a generic error when sign-in rejects a non-error', async () => {
+    const values = await magicLinkValuesFactory.build()
+    signInMagicLink.mockRejectedValue('boom')
+
+    await expect(requestMagicLink({ data: values })).resolves.toEqual({
+      error: 'Could not send the sign-in link',
     })
   })
 })
@@ -495,7 +523,7 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('heading', { name: \`Hello \${session.user.name}\` })
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /manage posts/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /manage posts/i })).toHaveAttribute(
       'href',
       '/dashboard/posts'
     )
@@ -522,7 +550,7 @@ const { signOut, headers } = vi.hoisted(() => ({
 
 vi.mock('next/headers', () => ({ headers }))
 vi.mock('next/navigation', async () => import('{{importPrefix}}test/mocks/navigation'))
-vi.mock('{{libImport}}/auth', () => ({
+vi.mock('{{libImport}}/auth/auth', () => ({
   auth: { api: { signOut } },
 }))
 
@@ -556,7 +584,7 @@ import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import PostsPage from './page'
 
-vi.mock('{{libImport}}/db', async () => {
+vi.mock('{{libImport}}/database/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
@@ -588,7 +616,7 @@ describe('PostsPage', () => {
     render(await PostsPage())
 
     expect(screen.getByText(/no posts yet/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /new post/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /new post/i })).toHaveAttribute(
       'href',
       '/dashboard/posts/new'
     )
@@ -740,7 +768,7 @@ import { redirect } from '{{importPrefix}}test/mocks/navigation'
 import { createPost } from './create-post'
 
 vi.mock('next/navigation', async () => import('{{importPrefix}}test/mocks/navigation'))
-vi.mock('{{libImport}}/db', async () => {
+vi.mock('{{libImport}}/database/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
@@ -754,20 +782,23 @@ describe('createPost', () => {
     vi.clearAllMocks()
   })
 
-  test('returns a validation error for short input', async () => {
-    const values = await postInputFactory.use((traits) => traits.invalid).build()
-    await expect(createPost({ data: values })).resolves.toEqual({
-      error: 'Title must be at least 3 characters',
-    })
-    expect(dbMock.orm.public.Post.create).not.toHaveBeenCalled()
-  })
-
   test('redirects to login when there is no session', async () => {
     vi.mocked(getServerSideSession).mockResolvedValue(null)
     const values = await postInputFactory.build()
 
     await expect(createPost({ data: values })).rejects.toThrow('NEXT_REDIRECT:/login')
     expect(redirect).toHaveBeenCalledWith('/login')
+    expect(dbMock.orm.public.Post.create).not.toHaveBeenCalled()
+  })
+
+  test('returns a validation error for short input', async () => {
+    const session = await sessionFactory.build()
+    vi.mocked(getServerSideSession).mockResolvedValue(session as never)
+    const values = await postInputFactory.use((traits) => traits.invalid).build()
+
+    await expect(createPost({ data: values })).resolves.toEqual({
+      error: 'Title must be at least 3 characters',
+    })
     expect(dbMock.orm.public.Post.create).not.toHaveBeenCalled()
   })
 
@@ -791,14 +822,20 @@ describe('createPost', () => {
     expect(redirect).toHaveBeenCalledWith('/dashboard/posts')
   })
 
-  test('returns an error when create fails', async () => {
+  test('returns a mapped database error when create fails', async () => {
     const session = await sessionFactory.build()
     const values = await postInputFactory.build()
     vi.mocked(getServerSideSession).mockResolvedValue(session as never)
-    dbMock.orm.public.Post.create.mockRejectedValue(new Error('db down'))
+    dbMock.orm.public.Post.create.mockRejectedValue(
+      Object.assign(new Error('duplicate key'), {
+        code: '23505',
+        constraint: 'post_slug_key',
+      }),
+    )
 
     await expect(createPost({ data: values })).resolves.toEqual({
-      error: 'db down',
+      error: 'A post with this title already exists',
+      kind: 'unique',
     })
     expect(redirect).not.toHaveBeenCalled()
   })
@@ -832,7 +869,7 @@ import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import { GET } from './route'
 
-vi.mock('{{libImport}}/db', async () => {
+vi.mock('{{libImport}}/database/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
@@ -889,7 +926,7 @@ vi.mock('better-auth/next-js', () => ({
     POST: vi.fn(),
   })),
 }))
-vi.mock('{{libImport}}/auth', () => ({
+vi.mock('{{libImport}}/auth/auth', () => ({
   auth: { api: {} },
 }))
 
@@ -904,14 +941,13 @@ describe('auth route', () => {
   )
 }
 
-function authServerTest() {
-  return `import { betterAuth } from 'better-auth'
+function authServerTest(ctx: TemplateContext) {
+  return t(
+    `import { betterAuth } from 'better-auth'
 import { nextCookies } from 'better-auth/next-js'
 import { magicLink } from 'better-auth/plugins'
 import { Pool } from 'pg'
-import { describe, expect, test, vi } from 'vitest'
-
-import { auth } from './auth'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 vi.mock('pg', () => ({
   Pool: vi.fn(function MockPool() {}),
@@ -928,9 +964,27 @@ vi.mock('better-auth/next-js', () => ({
 vi.mock('better-auth/plugins', () => ({
   magicLink: vi.fn(() => 'magic-link'),
 }))
+vi.mock('{{libImport}}/env/env', () => ({
+  env: {
+    databaseUrl: 'postgresql://postgres:postgres@localhost:5432/test',
+    betterAuthSecret: 'secret',
+    betterAuthUrl: 'http://localhost:3000',
+    nodeEnv: 'test',
+  },
+}))
+vi.mock('{{libImport}}/magic-link/dev-magic-link', () => ({
+  rememberMagicLink: vi.fn(),
+}))
 
 describe('auth', () => {
-  test('enables magic link against a pg pool', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  test('enables magic link against a pg pool', async () => {
+    const { auth } = await import('./auth')
+
     expect(Pool).toHaveBeenCalled()
     expect(magicLink).toHaveBeenCalled()
     expect(nextCookies).toHaveBeenCalled()
@@ -945,15 +999,16 @@ describe('auth', () => {
     })
   })
 })
-`
+`,
+    ctx
+  )
 }
 
-function authClientTest() {
-  return `import { magicLinkClient } from 'better-auth/client/plugins'
+function authClientTest(ctx: TemplateContext) {
+  return t(
+    `import { magicLinkClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
-import { describe, expect, test, vi } from 'vitest'
-
-import { authClient, getSession, signIn, signOut, useSession } from './auth-client'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 vi.mock('better-auth/client/plugins', () => ({
   magicLinkClient: vi.fn(() => 'magic-link-client'),
@@ -966,9 +1021,23 @@ vi.mock('better-auth/react', () => ({
     getSession: vi.fn(),
   })),
 }))
+vi.mock('{{libImport}}/env/env', () => ({
+  env: {
+    betterAuthUrl: 'http://localhost:3000',
+  },
+}))
 
 describe('auth-client', () => {
-  test('re-exports the Better Auth browser client', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  test('re-exports the Better Auth browser client', async () => {
+    const { authClient, getSession, signIn, signOut, useSession } = await import(
+      './auth-client'
+    )
+
     expect(magicLinkClient).toHaveBeenCalled()
     expect(createAuthClient).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -981,7 +1050,9 @@ describe('auth-client', () => {
     expect(getSession).toBe(authClient.getSession)
   })
 })
-`
+`,
+    ctx
+  )
 }
 
 function devMagicLinkTest() {
@@ -1017,7 +1088,7 @@ const { getSession, headers } = vi.hoisted(() => ({
 }))
 
 vi.mock('next/headers', () => ({ headers }))
-vi.mock('{{libImport}}/auth', () => ({
+vi.mock('{{libImport}}/auth/auth', () => ({
   auth: { api: { getSession } },
 }))
 
@@ -1066,6 +1137,138 @@ describe('db', () => {
   )
 }
 
+function dbErrorTest() {
+  return `import { describe, expect, test } from 'vitest'
+
+import { getDatabaseError, getDatabaseErrorInfo } from './db-error'
+
+function postgresError(
+  code: string,
+  message: string,
+  extras: Record<string, string> = {},
+): Error {
+  return Object.assign(new Error(message), { code, ...extras })
+}
+
+describe('getDatabaseError', () => {
+  test('returns an action error for unique violations', () => {
+    const error = postgresError('23505', 'duplicate key', {
+      constraint: 'post_slug_key',
+      column: 'slug',
+      table: 'post',
+    })
+
+    expect(getDatabaseError(error)).toEqual({
+      error: 'A post with this title already exists',
+      kind: 'unique',
+    })
+    expect(getDatabaseErrorInfo(error)).toEqual({
+      kind: 'unique',
+      message: 'A post with this title already exists',
+      constraint: 'post_slug_key',
+      column: 'slug',
+      table: 'post',
+    })
+  })
+
+  test('uses a generic unique message when the constraint is unknown', () => {
+    expect(getDatabaseError(postgresError('23505', 'duplicate key'))).toEqual({
+      error: 'This value is already taken',
+      kind: 'unique',
+    })
+  })
+
+  test('maps foreign key, not-null, and check violations', () => {
+    expect(getDatabaseError(postgresError('23503', 'fk'))).toEqual({
+      error: 'Related record was not found',
+      kind: 'foreignKey',
+    })
+    expect(getDatabaseError(postgresError('23502', 'null'))).toEqual({
+      error: 'A required field is missing',
+      kind: 'notNull',
+    })
+    expect(getDatabaseError(postgresError('23514', 'check'))).toEqual({
+      error: 'This value is not allowed',
+      kind: 'check',
+    })
+  })
+
+  test('walks Error.cause to find a nested driver error', () => {
+    const error = new Error('write failed', {
+      cause: postgresError('23505', 'duplicate key'),
+    })
+
+    expect(getDatabaseError(error)).toEqual({
+      error: 'This value is already taken',
+      kind: 'unique',
+    })
+  })
+
+  test('walks plain-object causes and unique message text', () => {
+    expect(
+      getDatabaseError({
+        message: 'wrapper',
+        cause: postgresError('23505', 'duplicate key'),
+      }),
+    ).toEqual({
+      error: 'This value is already taken',
+      kind: 'unique',
+    })
+    expect(
+      getDatabaseError(new Error('duplicate key value violates unique constraint')),
+    ).toEqual({
+      error: 'This value is already taken',
+      kind: 'unique',
+    })
+  })
+
+  test('stops walking when a cause is not an object', () => {
+    expect(
+      getDatabaseError({
+        message: 'wrapper',
+        cause: 'not-an-object',
+      }),
+    ).toEqual({
+      error: 'Could not complete the request',
+      kind: 'unknown',
+    })
+  })
+
+  test('treats missing tables and refused connections as unready', () => {
+    const missingTable = new Error('relation "public.post" does not exist')
+
+    expect(getDatabaseError(missingTable)).toEqual({
+      error: 'The database is not ready',
+      kind: 'unready',
+    })
+    expect(
+      getDatabaseError(postgresError('ECONNREFUSED', 'connect ECONNREFUSED')),
+    ).toEqual({
+      error: 'The database is not ready',
+      kind: 'unready',
+    })
+    expect(getDatabaseError(postgresError('42P01', 'undefined table'))).toEqual(
+      {
+        error: 'The database is not ready',
+        kind: 'unready',
+      },
+    )
+  })
+
+  test('uses the fallback for unknown errors', () => {
+    expect(getDatabaseError(new Error('weird'))).toEqual({
+      error: 'Could not complete the request',
+      kind: 'unknown',
+    })
+    expect(getDatabaseError('nope')).toEqual({
+      error: 'Could not complete the request',
+      kind: 'unknown',
+    })
+  })
+})
+`
+}
+
 function seedTest(ctx: TemplateContext) {
   return t(
     `import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -1074,11 +1277,11 @@ import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import { seed } from './seed'
 
-vi.mock('{{libImport}}/db', async () => {
+vi.mock('{{libImport}}/database/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
-vi.mock('{{libImport}}/env', () => ({
+vi.mock('{{libImport}}/env/env', () => ({
   env: { databaseUrl: 'postgresql://postgres:postgres@localhost:5432/test' },
 }))
 
@@ -1127,7 +1330,7 @@ function resetTest(ctx: TemplateContext) {
   return t(
     `import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { env } from '{{libImport}}/env'
+import { env } from '{{libImport}}/env/env'
 
 import { resetDatabase } from './reset'
 
@@ -1142,10 +1345,12 @@ const { envState, query, end } = vi.hoisted(() => ({
 }))
 
 vi.mock('pg', () => ({
-  Pool: vi.fn(() => ({ query, end })),
+  Pool: vi.fn(function MockPool() {
+    return { query, end }
+  }),
 }))
 
-vi.mock('{{libImport}}/env', () => ({
+vi.mock('{{libImport}}/env/env', () => ({
   env: envState,
 }))
 

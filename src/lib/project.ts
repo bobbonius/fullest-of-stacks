@@ -97,11 +97,11 @@ export function inspectProject(
   const srcRoot = srcDir ? 'src' : '.'
   const appDir = srcDir ? 'src/app' : 'app'
   const sharedRoot = srcDir ? 'src/shared' : 'shared'
-  const libDir = `${sharedRoot}/lib`
-  const libImport = `${importPrefix}shared/lib`
+  const libDir = `${sharedRoot}/libs`
+  const libImport = `${importPrefix}shared/libs`
 
   const componentsPath = path.join(projectDir, 'components.json')
-  let utilsImport = `${importPrefix}shared/lib/utils`
+  let utilsImport = `${importPrefix}shared/libs/utils`
   let uiImport = `${importPrefix}shared/components/ui`
 
   if (exists(componentsPath)) {
@@ -122,6 +122,8 @@ export function inspectProject(
   const prismaDbPath = firstExisting([
     path.join(projectDir, 'src/prisma/db.ts'),
     path.join(projectDir, 'prisma/db.ts'),
+    path.join(projectDir, 'src/shared/libs/database/db.ts'),
+    path.join(projectDir, 'shared/libs/database/db.ts'),
     path.join(projectDir, 'src/shared/lib/prisma.ts'),
     path.join(projectDir, 'shared/lib/prisma.ts'),
     path.join(projectDir, 'src/lib/prisma.ts'),

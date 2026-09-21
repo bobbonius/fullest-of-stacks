@@ -11,7 +11,9 @@ import {
   authClient,
   authRoute,
   authServer,
+  dbError,
   dbFallback,
+  dbModels,
   dbReexport,
   devMagicLink,
   envModule,
@@ -35,17 +37,19 @@ export function writeAuthFiles(ctx: ProjectContext) {
   const tpl = asTemplate(ctx)
   const secret = randomBytes(32).toString('base64')
 
-  writeText(srcFile(ctx, 'shared/lib/env.ts'), envModule())
-  writeText(srcFile(ctx, 'shared/lib/dev-magic-link.ts'), devMagicLink())
-  writeText(srcFile(ctx, 'shared/lib/auth.ts'), authServer(tpl))
-  writeText(srcFile(ctx, 'shared/lib/auth-client.ts'), authClient(tpl))
-  writeText(srcFile(ctx, 'shared/lib/server/get-session.ts'), getSession(tpl))
+  writeText(srcFile(ctx, 'shared/libs/env/env.ts'), envModule())
+  writeText(srcFile(ctx, 'shared/libs/magic-link/dev-magic-link.ts'), devMagicLink())
+  writeText(srcFile(ctx, 'shared/libs/auth/auth.ts'), authServer(tpl))
+  writeText(srcFile(ctx, 'shared/libs/auth/auth-client.ts'), authClient(tpl))
+  writeText(srcFile(ctx, 'shared/libs/server/get-session.ts'), getSession(tpl))
+  writeText(srcFile(ctx, 'shared/libs/database/db-error.ts'), dbError())
+  writeText(srcFile(ctx, 'shared/libs/database/models.ts'), dbModels(tpl))
   writeText(srcFile(ctx, 'app/api/auth/[...all]/route.ts'), authRoute(tpl))
 
   if (ctx.prismaDbPath) {
-    writeText(srcFile(ctx, 'shared/lib/db.ts'), dbReexport(tpl))
+    writeText(srcFile(ctx, 'shared/libs/database/db.ts'), dbReexport(tpl))
   } else {
-    writeText(srcFile(ctx, 'shared/lib/db.ts'), dbFallback(tpl))
+    writeText(srcFile(ctx, 'shared/libs/database/db.ts'), dbFallback(tpl))
   }
 
   const envContents = t(envExample(), tpl)

@@ -97,8 +97,13 @@ src/
     api/posts/                     authenticated JSON list
   shared/
     components/ui/                 shadcn
-    lib/                           auth, db, env, session
-    utils/                         slugify
+    libs/
+      auth/                        Better Auth server + client
+      database/                    db, models, db-error
+      env/                         process.env boundary
+      magic-link/                  starter-only URL store
+      server/                      getServerSideSession
+      utils/                       cn (shadcn) + slugify
     hooks/
   prisma/                          User/Session/Account/Verification + Post
   test/factories/                  factory-js user, session, post, form input

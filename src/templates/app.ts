@@ -121,40 +121,13 @@ export function getPublishedPostsAction(ctx: TemplateContext) {
   return t(
     `'use server'
 
-import { db } from '{{libImport}}/db'
-
-export interface PublishedPost {
-  id: string
-  title: string
-  body: string
-  slug: string
-  published: boolean
-  authorId: string
-}
+import { db } from '{{libImport}}/database/db'
+import { getDatabaseError } from '{{libImport}}/database/db-error'
+import type { Post } from '{{libImport}}/database/models'
 
 export interface PublishedPostsResult {
-  posts: PublishedPost[]
+  posts: Post[]
   setupError?: string
-}
-
-function isUnreadyDatabase(error: unknown): boolean {
-  const parts: string[] = []
-  let current: unknown = error
-
-  for (let depth = 0; depth < 4 && current; depth += 1) {
-    if (current instanceof Error) {
-      parts.push(current.name, current.message)
-      current = current.cause
-      continue
-    }
-
-    parts.push(String(current))
-    break
-  }
-
-  return /does not exist|ECONNREFUSED|42P01|DATABASE_URL is not set|connect(ion)? refused/i.test(
-    parts.join(' '),
-  )
 }
 
 export async function getPublishedPosts(): Promise<PublishedPostsResult> {
@@ -162,7 +135,7 @@ export async function getPublishedPosts(): Promise<PublishedPostsResult> {
     const posts = await db.orm.public.Post.where({ published: true }).all()
     return { posts }
   } catch (error: unknown) {
-    if (isUnreadyDatabase(error)) {
+    if (getDatabaseError(error).kind === 'unready') {
       return {
         posts: [],
         setupError:
@@ -183,11 +156,10 @@ export function postListComponent(ctx: TemplateContext) {
     `import type { JSX } from 'react'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '{{uiImport}}/card'
-
-import type { PublishedPost } from '../_actions/get-published-posts'
+import type { Post } from '{{libImport}}/database/models'
 
 interface Props {
-  readonly posts: readonly PublishedPost[]
+  readonly posts: readonly Post[]
   readonly setupError?: string
 }
 
@@ -275,9 +247,9 @@ export function requestMagicLinkAction(ctx: TemplateContext) {
 
 import { headers } from 'next/headers'
 
-import { auth } from '{{libImport}}/auth'
-import { takeLastMagicLink } from '{{libImport}}/dev-magic-link'
-import { env } from '{{libImport}}/env'
+import { auth } from '{{libImport}}/auth/auth'
+import { env } from '{{libImport}}/env/env'
+import { takeLastMagicLink } from '{{libImport}}/magic-link/dev-magic-link'
 
 import { type LoginFormData, LoginFormSchema } from '../schema'
 
@@ -377,7 +349,7 @@ export function LoginForm(): JSX.Element {
           This page prints the magic-link URL so you can try auth without an
           email provider. Delete the preview,{' '}
           <code className="rounded bg-amber-200/80 px-1 dark:bg-amber-800">
-            shared/lib/dev-magic-link.ts
+            shared/libs/magic-link/dev-magic-link.ts
           </code>
           , and the <code className="rounded bg-amber-200/80 px-1 dark:bg-amber-800">sendMagicLink</code>{' '}
           store-and-print callback before you ship.
@@ -505,7 +477,7 @@ export function dashboardActions(ctx: TemplateContext) {
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { auth } from '{{libImport}}/auth'
+import { auth } from '{{libImport}}/auth/auth'
 
 export async function signOutAction(): Promise<never> {
   await auth.api.signOut({
@@ -524,7 +496,7 @@ export function postsPage(ctx: TemplateContext) {
 import type { JSX } from 'react'
 
 import { Button } from '{{uiImport}}/button'
-import { db } from '{{libImport}}/db'
+import { db } from '{{libImport}}/database/db'
 import { getServerSideSession } from '{{libImport}}/server/get-session'
 
 export default async function PostsPage(): Promise<JSX.Element> {
@@ -667,9 +639,10 @@ export function postActions(ctx: TemplateContext) {
 
 import { redirect } from 'next/navigation'
 
-import { db } from '{{libImport}}/db'
+import { db } from '{{libImport}}/database/db'
+import { getDatabaseError } from '{{libImport}}/database/db-error'
 import { getServerSideSession } from '{{libImport}}/server/get-session'
-import { slugify } from '{{importPrefix}}shared/utils/slugify'
+import { slugify } from '{{utilsImport}}/slugify'
 
 import { type PostFormData, PostFormSchema } from '../schema'
 
@@ -680,14 +653,17 @@ interface Props {
 export async function createPost({
   data,
 }: Props): Promise<{ error: string } | undefined> {
-  const parsed = PostFormSchema.safeParse(data)
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid post' }
-  }
-
   const session = await getServerSideSession()
+
   if (!session) {
     return redirect('/login')
+  }
+
+  const { user } = session
+  const parsed = PostFormSchema.safeParse(data)
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Invalid post' }
   }
 
   try {
@@ -696,12 +672,10 @@ export async function createPost({
       body: parsed.data.body,
       slug: slugify(parsed.data.title),
       published: true,
-      authorId: session.user.id,
+      authorId: user.id,
     })
   } catch (error: unknown) {
-    return {
-      error: error instanceof Error ? error.message : 'Could not save the post',
-    }
+    return getDatabaseError(error)
   }
 
   return redirect('/dashboard/posts')
@@ -720,7 +694,7 @@ export function healthRoute() {
 
 export function postsApi(ctx: TemplateContext) {
   return t(
-    `import { db } from '{{libImport}}/db'
+    `import { db } from '{{libImport}}/database/db'
 import { getServerSideSession } from '{{libImport}}/server/get-session'
 
 export async function GET(): Promise<Response> {
@@ -739,9 +713,9 @@ export async function GET(): Promise<Response> {
 
 export function seed(ctx: TemplateContext) {
   return t(
-    `import '{{libImport}}/env'
+    `import '{{libImport}}/env/env'
 
-import { db } from '{{libImport}}/db'
+import { db } from '{{libImport}}/database/db'
 
 const SEED_POSTS = [
   {
@@ -791,6 +765,7 @@ export async function seed(): Promise<void> {
 }
 
 if (process.argv[1]?.endsWith('seed.ts') || process.argv[1]?.endsWith('seed.js')) {
+  /* v8 ignore start */
   void (async (): Promise<void> => {
     try {
       await seed()
@@ -799,6 +774,7 @@ if (process.argv[1]?.endsWith('seed.ts') || process.argv[1]?.endsWith('seed.js')
       process.exit(1)
     }
   })()
+  /* v8 ignore stop */
 }
 `,
     ctx
@@ -809,7 +785,7 @@ export function resetDatabase(ctx: TemplateContext) {
   return t(
     `import { Pool } from 'pg'
 
-import { env } from '{{libImport}}/env'
+import { env } from '{{libImport}}/env/env'
 
 export async function resetDatabase(): Promise<void> {
   if (!env.databaseUrl) {
@@ -828,6 +804,7 @@ export async function resetDatabase(): Promise<void> {
 }
 
 if (process.argv[1]?.endsWith('reset.ts') || process.argv[1]?.endsWith('reset.js')) {
+  /* v8 ignore start */
   void (async (): Promise<void> => {
     try {
       await resetDatabase()
@@ -836,6 +813,7 @@ if (process.argv[1]?.endsWith('reset.ts') || process.argv[1]?.endsWith('reset.js
       process.exit(1)
     }
   })()
+  /* v8 ignore stop */
 }
 `,
     ctx

@@ -84,7 +84,7 @@ export function writeToolingConfigs(ctx: ProjectContext) {
   writeJson(path.join(ctx.projectDir, 'package.json'), pkg)
 
   writeText(
-    srcFile(ctx, 'shared/utils/slugify.ts'),
+    srcFile(ctx, 'shared/libs/utils/slugify.ts'),
     `export function slugify(value: string): string {
   return String(value)
     .normalize('NFKD')
@@ -99,7 +99,7 @@ export function writeToolingConfigs(ctx: ProjectContext) {
   )
 
   writeText(
-    srcFile(ctx, 'shared/utils/slugify.test.ts'),
+    srcFile(ctx, 'shared/libs/utils/slugify.test.ts'),
     `import { describe, expect, test } from 'vitest'
 
 import { slugify } from './slugify'

@@ -1,7 +1,7 @@
 import { existsSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
 
-import { exists, readOptional, writeText } from '../lib/fs.ts'
+import { exists, readOptional, removeIfEmpty, writeText } from '../lib/fs.ts'
 import type { ProjectContext } from '../lib/project.ts'
 import { srcFile } from '../lib/project.ts'
 import { toTemplateContext } from '../lib/template.ts'
@@ -199,6 +199,35 @@ function removeLegacyAuthFiles(ctx: ProjectContext) {
       '(dashboard)/dashboard/posts/new/_components/PostForm/_actions/create-post.ts'
     )
   )
+  removeLegacyLibFiles(ctx)
+}
+
+function removeLegacyLibFiles(ctx: ProjectContext) {
+  const sharedRoot = path.join(ctx.projectDir, ctx.sharedRoot)
+  const legacyLibFiles = [
+    'lib/env.ts',
+    'lib/auth.ts',
+    'lib/auth-client.ts',
+    'lib/db.ts',
+    'lib/dev-magic-link.ts',
+    'lib/server/get-session.ts',
+    'lib/env.test.ts',
+    'lib/auth.test.ts',
+    'lib/auth-client.test.ts',
+    'lib/db.test.ts',
+    'lib/dev-magic-link.test.ts',
+    'lib/server/get-session.test.ts',
+    'utils/slugify.ts',
+    'utils/slugify.test.ts',
+  ]
+
+  for (const relative of legacyLibFiles) {
+    removeIfExists(path.join(sharedRoot, relative))
+  }
+
+  removeIfEmpty(path.join(sharedRoot, 'lib/server'))
+  removeIfEmpty(path.join(sharedRoot, 'lib'))
+  removeIfEmpty(path.join(sharedRoot, 'utils'))
 }
 
 function patchGitignore(projectDir: string) {
@@ -273,7 +302,7 @@ Open \`/login\`, request a magic link, and click the highlighted URL on the page
 - Prisma 8 contract in \`src/prisma\` (or \`prisma/\`) plus seeded homepage posts
 - Zod-validated create-post server action
 - Vitest + Testing Library + factory-js, with coverage on generated files (\`pnpm test:coverage\`)
-- ESLint (type-checked TypeScript, import sort, no \`process.env\` outside \`shared/lib/env.ts\`) and Prettier (no semicolons, single quotes, Tailwind class sort)
+- ESLint (type-checked TypeScript, import sort, no \`process.env\` outside \`shared/libs/env/env.ts\`) and Prettier (no semicolons, single quotes, Tailwind class sort)
 `
   if (!current.includes('fullest-of-stacks')) {
     writeText(readmePath, `${current.trimEnd()}\n${extra}`)
