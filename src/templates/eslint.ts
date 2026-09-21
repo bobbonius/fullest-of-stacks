@@ -39,6 +39,18 @@ const generalRestrictedSyntax = [
     selector: String.raw\`JSXText[value=/^\\s*;\\s*$/]\`,
     message: 'Stray semicolon after a JSX element. Remove it.',
   },
+  {
+    selector:
+      ':matches(JSXElement, JSXFragment) > JSXExpressionContainer ConditionalExpression > Literal[value=null]',
+    message:
+      'Use \`undefined\` instead of \`null\` when a JSX ternary renders nothing (\`condition ? <El /> : undefined\`).',
+  },
+  {
+    selector:
+      ":matches(JSXElement, JSXFragment) > JSXExpressionContainer > LogicalExpression[operator='&&']",
+    message:
+      'Use a ternary that returns \`undefined\` when false (\`condition ? <El /> : undefined\`). Avoid \`&&\` in JSX.',
+  },
 ]
 
 const config = [
@@ -157,7 +169,7 @@ const config = [
       '@typescript-eslint/method-signature-style': ['error', 'property'],
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/prefer-regexp-exec': 'error',
-      '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
 
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [

@@ -2,7 +2,7 @@
 
 CLI starter that scaffolds a full-stack Next.js app by running the **official** Next.js, shadcn, and Prisma 8 wizards, then layering on Better Auth (magic links), Zod, Vitest, factory-js, ESLint, and Prettier.
 
-The generated app uses `src/`, route groups, colocated `_actions` / `_components`, and a `shared/` folder for anything used across routes.
+The generated app uses `src/`, route groups, colocated route-level `_actions` / `_components`, form-owned `schema/` and `actions/`, and a `shared/` folder for anything used across routes.
 
 The CLI asks for a **PostgreSQL** port and database name (Postgres only), then writes:
 
@@ -83,12 +83,15 @@ src/
     (app)/_actions/                homepage data
     (app)/_components/             homepage UI
     (app)/login/                   magic-link sign-in
-    (app)/login/_actions/          request magic link
-    (app)/login/_components/       login form
+    (app)/login/_components/LoginForm/
+      schema/                      Zod for the login form
+      actions/                     request magic link
     (dashboard)/layout.tsx         session gate
     (dashboard)/dashboard/         signed-in home
     (dashboard)/dashboard/_actions/
-    (dashboard)/dashboard/posts/   Prisma 8 + Zod example
+    (dashboard)/dashboard/posts/new/_components/PostForm/
+      schema/                      Zod for the post form
+      actions/                     create post
     api/auth/[...all]/             Better Auth handler
     api/health/                    health check
     api/posts/                     authenticated JSON list

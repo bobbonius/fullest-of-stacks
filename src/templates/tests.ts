@@ -8,17 +8,20 @@ export function generatedTests(ctx: TemplateContext) {
     'app/(app)/_actions/get-published-posts.test.ts': getPublishedPostsTest(ctx),
     'app/(app)/_components/post-list.test.tsx': postListTest(ctx),
     'app/(app)/login/page.test.tsx': loginPageTest(),
-    'app/(app)/login/schema.test.ts': loginSchemaTest(ctx),
-    'app/(app)/login/_components/login-form.test.tsx': loginFormTest(ctx),
-    'app/(app)/login/_actions/request-magic-link.test.ts': requestMagicLinkTest(ctx),
+    'app/(app)/login/_components/LoginForm/schema/index.test.ts': loginSchemaTest(ctx),
+    'app/(app)/login/_components/LoginForm/index.test.tsx': loginFormTest(ctx),
+    'app/(app)/login/_components/LoginForm/actions/request-magic-link.test.ts':
+      requestMagicLinkTest(ctx),
     'app/(dashboard)/layout.test.tsx': dashboardLayoutTest(ctx),
     'app/(dashboard)/dashboard/page.test.tsx': dashboardPageTest(ctx),
     'app/(dashboard)/dashboard/_actions/sign-out.test.ts': dashboardActionsTest(ctx),
     'app/(dashboard)/dashboard/posts/page.test.tsx': postsPageTest(ctx),
     'app/(dashboard)/dashboard/posts/new/page.test.tsx': newPostPageTest(),
-    'app/(dashboard)/dashboard/posts/new/_components/post-form.test.tsx': postFormTest(ctx),
-    'app/(dashboard)/dashboard/posts/new/schema.test.ts': postSchemaTest(ctx),
-    'app/(dashboard)/dashboard/posts/new/_actions/create-post.test.ts': postActionsTest(ctx),
+    'app/(dashboard)/dashboard/posts/new/_components/PostForm/index.test.tsx': postFormTest(ctx),
+    'app/(dashboard)/dashboard/posts/new/_components/PostForm/schema/index.test.ts':
+      postSchemaTest(ctx),
+    'app/(dashboard)/dashboard/posts/new/_components/PostForm/actions/create-post.test.ts':
+      postActionsTest(ctx),
     'app/api/health/route.test.ts': healthRouteTest(),
     'app/api/posts/route.test.ts': postsApiTest(ctx),
     'app/api/auth/[...all]/route.test.ts': authRouteTest(ctx),
@@ -232,7 +235,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import LoginPage from './page'
 
-vi.mock('./_components/login-form', () => ({
+vi.mock('./_components/LoginForm', () => ({
   LoginForm: () => <div>login form</div>,
 }))
 
@@ -251,16 +254,16 @@ function loginSchemaTest(ctx: TemplateContext) {
 
 import { magicLinkValuesFactory } from '{{importPrefix}}test/factories'
 
-import { MagicLinkSchema } from './schema'
+import { LoginFormSchema } from '.'
 
-describe('MagicLinkSchema', () => {
+describe('LoginFormSchema', () => {
   test('accepts a name and email', async () => {
     const values = await magicLinkValuesFactory.build()
-    expect(MagicLinkSchema.parse(values)).toEqual(values)
+    expect(LoginFormSchema.parse(values)).toEqual(values)
   })
 
   test('rejects an invalid email', () => {
-    const result = MagicLinkSchema.safeParse({
+    const result = LoginFormSchema.safeParse({
       name: 'Ada',
       email: 'not-an-email',
     })
@@ -280,10 +283,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { magicLinkValuesFactory } from '{{importPrefix}}test/factories'
 
-import { requestMagicLink } from '../_actions/request-magic-link'
-import { LoginForm } from './login-form'
+import { requestMagicLink } from './actions/request-magic-link'
+import { LoginForm } from '.'
 
-vi.mock('../_actions/request-magic-link', () => ({
+vi.mock('./actions/request-magic-link', () => ({
   requestMagicLink: vi.fn(),
 }))
 
@@ -321,7 +324,7 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /email me a sign-in link/i }))
 
     await waitFor(() => {
-      expect(requestMagicLink).toHaveBeenCalledWith(values)
+      expect(requestMagicLink).toHaveBeenCalledWith({ data: values })
     })
     expect(screen.getByRole('link', { name: magicLinkUrl })).toHaveAttribute(
       'href',
@@ -386,7 +389,7 @@ describe('requestMagicLink', () => {
 
   test('returns a validation error for a short name', async () => {
     await expect(
-      requestMagicLink({ name: 'A', email: 'ada@example.com' })
+      requestMagicLink({ data: { name: 'A', email: 'ada@example.com' } })
     ).resolves.toEqual({ error: 'Name is required' })
     expect(signInMagicLink).not.toHaveBeenCalled()
   })
@@ -397,7 +400,7 @@ describe('requestMagicLink', () => {
     signInMagicLink.mockResolvedValue({})
     takeLastMagicLink.mockReturnValue(magicLinkUrl)
 
-    await expect(requestMagicLink(values)).resolves.toEqual({ magicLinkUrl })
+    await expect(requestMagicLink({ data: values })).resolves.toEqual({ magicLinkUrl })
     expect(signInMagicLink).toHaveBeenCalledWith({
       body: {
         email: values.email,
@@ -617,7 +620,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import NewPostPage from './page'
 
-vi.mock('./_components/post-form', () => ({
+vi.mock('./_components/PostForm', () => ({
   PostForm: () => <div>post form</div>,
 }))
 
@@ -639,10 +642,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { postInputFactory } from '{{importPrefix}}test/factories'
 
-import { createPost } from '../_actions/create-post'
-import { PostForm } from './post-form'
+import { createPost } from './actions/create-post'
+import { PostForm } from '.'
 
-vi.mock('../_actions/create-post', () => ({
+vi.mock('./actions/create-post', () => ({
   createPost: vi.fn(),
 }))
 
@@ -677,7 +680,7 @@ describe('PostForm', () => {
     await user.click(screen.getByRole('button', { name: /publish/i }))
 
     await waitFor(() => {
-      expect(createPost).toHaveBeenCalledWith(values)
+      expect(createPost).toHaveBeenCalledWith({ data: values })
     })
   })
 
@@ -706,17 +709,17 @@ function postSchemaTest(ctx: TemplateContext) {
 
 import { postInputFactory } from '{{importPrefix}}test/factories'
 
-import { PostInputSchema } from './schema'
+import { PostFormSchema } from '.'
 
-describe('PostInputSchema', () => {
+describe('PostFormSchema', () => {
   test('accepts a valid post', async () => {
     const values = await postInputFactory.build()
-    expect(PostInputSchema.parse(values)).toEqual(values)
+    expect(PostFormSchema.parse(values)).toEqual(values)
   })
 
   test('rejects a short title', async () => {
     const values = await postInputFactory.use((traits) => traits.invalid).build()
-    const result = PostInputSchema.safeParse(values)
+    const result = PostFormSchema.safeParse(values)
     expect(result.success).toBe(false)
   })
 })
@@ -753,7 +756,7 @@ describe('createPost', () => {
 
   test('returns a validation error for short input', async () => {
     const values = await postInputFactory.use((traits) => traits.invalid).build()
-    await expect(createPost(values)).resolves.toEqual({
+    await expect(createPost({ data: values })).resolves.toEqual({
       error: 'Title must be at least 3 characters',
     })
     expect(dbMock.orm.public.Post.create).not.toHaveBeenCalled()
@@ -763,7 +766,7 @@ describe('createPost', () => {
     vi.mocked(getServerSideSession).mockResolvedValue(null)
     const values = await postInputFactory.build()
 
-    await expect(createPost(values)).rejects.toThrow('NEXT_REDIRECT:/login')
+    await expect(createPost({ data: values })).rejects.toThrow('NEXT_REDIRECT:/login')
     expect(redirect).toHaveBeenCalledWith('/login')
     expect(dbMock.orm.public.Post.create).not.toHaveBeenCalled()
   })
@@ -774,7 +777,7 @@ describe('createPost', () => {
     vi.mocked(getServerSideSession).mockResolvedValue(session as never)
     dbMock.orm.public.Post.create.mockResolvedValue({ id: 'post_1' })
 
-    await expect(createPost(values)).rejects.toThrow(
+    await expect(createPost({ data: values })).rejects.toThrow(
       'NEXT_REDIRECT:/dashboard/posts'
     )
 
@@ -786,6 +789,18 @@ describe('createPost', () => {
       authorId: session.user.id,
     })
     expect(redirect).toHaveBeenCalledWith('/dashboard/posts')
+  })
+
+  test('returns an error when create fails', async () => {
+    const session = await sessionFactory.build()
+    const values = await postInputFactory.build()
+    vi.mocked(getServerSideSession).mockResolvedValue(session as never)
+    dbMock.orm.public.Post.create.mockRejectedValue(new Error('db down'))
+
+    await expect(createPost({ data: values })).resolves.toEqual({
+      error: 'db down',
+    })
+    expect(redirect).not.toHaveBeenCalled()
   })
 })
 `,

@@ -34,11 +34,11 @@ export const metadata: Metadata = {
   description: 'Scaffolded with fullest-of-stacks',
 }
 
-type RootLayoutProps = {
+interface Props {
   readonly children: ReactNode
 }
 
-export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
+export default function RootLayout({ children }: Props): JSX.Element {
   return (
     <html lang="en" className={geistSans.variable}>
       <body
@@ -123,7 +123,7 @@ export function getPublishedPostsAction(ctx: TemplateContext) {
 
 import { db } from '{{libImport}}/db'
 
-type PublishedPost = {
+export interface PublishedPost {
   id: string
   title: string
   body: string
@@ -132,7 +132,7 @@ type PublishedPost = {
   authorId: string
 }
 
-export type PublishedPostsResult = {
+export interface PublishedPostsResult {
   posts: PublishedPost[]
   setupError?: string
 }
@@ -184,19 +184,14 @@ export function postListComponent(ctx: TemplateContext) {
 
 import { Card, CardDescription, CardHeader, CardTitle } from '{{uiImport}}/card'
 
-type Post = {
-  id: string
-  title: string
-  body: string
-  slug: string
-}
+import type { PublishedPost } from '../_actions/get-published-posts'
 
-type PostListProps = {
-  readonly posts: readonly Post[]
+interface Props {
+  readonly posts: readonly PublishedPost[]
   readonly setupError?: string
 }
 
-export function PostList({ posts, setupError }: PostListProps): JSX.Element {
+export function PostList({ posts, setupError }: Props): JSX.Element {
   if (setupError) {
     return (
       <section className="space-y-2">
@@ -250,7 +245,7 @@ export function PostList({ posts, setupError }: PostListProps): JSX.Element {
 export function loginPage() {
   return `import type { JSX } from 'react'
 
-import { LoginForm } from './_components/login-form'
+import { LoginForm } from './_components/LoginForm'
 
 export default function LoginPage(): JSX.Element {
   return (
@@ -265,12 +260,12 @@ export default function LoginPage(): JSX.Element {
 export function loginSchema() {
   return `import { z } from 'zod'
 
-export const MagicLinkSchema = z.object({
+export const LoginFormSchema = z.object({
   name: z.string().trim().min(2, 'Name is required'),
   email: z.email('Enter a valid email'),
 })
 
-export type MagicLinkInput = z.infer<typeof MagicLinkSchema>
+export type LoginFormData = z.infer<typeof LoginFormSchema>
 `
 }
 
@@ -284,12 +279,16 @@ import { auth } from '{{libImport}}/auth'
 import { takeLastMagicLink } from '{{libImport}}/dev-magic-link'
 import { env } from '{{libImport}}/env'
 
-import { type MagicLinkInput, MagicLinkSchema } from '../schema'
+import { type LoginFormData, LoginFormSchema } from '../schema'
 
-export async function requestMagicLink(
-  input: MagicLinkInput,
-): Promise<{ error?: string; magicLinkUrl?: string }> {
-  const parsed = MagicLinkSchema.safeParse(input)
+interface Props {
+  readonly data: LoginFormData
+}
+
+export async function requestMagicLink({
+  data,
+}: Props): Promise<{ error?: string; magicLinkUrl?: string }> {
+  const parsed = LoginFormSchema.safeParse(data)
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid email' }
   }
@@ -335,21 +334,21 @@ import { Button } from '{{uiImport}}/button'
 import { Input } from '{{uiImport}}/input'
 import { Label } from '{{uiImport}}/label'
 
-import { requestMagicLink } from '../_actions/request-magic-link'
-import { type MagicLinkInput, MagicLinkSchema } from '../schema'
+import { requestMagicLink } from './actions/request-magic-link'
+import { type LoginFormData, LoginFormSchema } from './schema'
 
 export function LoginForm(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null)
-  const form = useForm<MagicLinkInput>({
-    resolver: zodResolver(MagicLinkSchema),
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(LoginFormSchema),
     defaultValues: { name: '', email: '' },
   })
 
-  const onSubmit = async (values: MagicLinkInput): Promise<void> => {
+  const onSubmit = async (values: LoginFormData): Promise<void> => {
     setError(null)
     setMagicLinkUrl(null)
-    const result = await requestMagicLink(values)
+    const result = await requestMagicLink({ data: values })
     if (result.error) {
       setError(result.error)
       return
@@ -391,7 +390,7 @@ export function LoginForm(): JSX.Element {
           <p className="text-sm text-destructive">
             {form.formState.errors.name.message}
           </p>
-        ) : null}
+        ) : undefined}
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
@@ -405,9 +404,9 @@ export function LoginForm(): JSX.Element {
           <p className="text-sm text-destructive">
             {form.formState.errors.email.message}
           </p>
-        ) : null}
+        ) : undefined}
       </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : undefined}
       {magicLinkUrl ? (
         <div
           role="status"
@@ -421,7 +420,7 @@ export function LoginForm(): JSX.Element {
             {magicLinkUrl}
           </a>
         </div>
-      ) : null}
+      ) : undefined}
       <Button className="w-full" type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? 'Sending link…' : 'Email me a sign-in link'}
       </Button>
@@ -440,13 +439,13 @@ import type { ReactNode } from 'react'
 
 import { getServerSideSession } from '{{libImport}}/server/get-session'
 
-type DashboardLayoutProps = {
+interface Props {
   readonly children: ReactNode
 }
 
 export default async function DashboardLayout({
   children,
-}: DashboardLayoutProps): Promise<ReactNode> {
+}: Props): Promise<ReactNode> {
   const session = await getServerSideSession()
 
   if (!session) {
@@ -567,7 +566,7 @@ export default async function PostsPage(): Promise<JSX.Element> {
 export function newPostPage() {
   return `import type { JSX } from 'react'
 
-import { PostForm } from './_components/post-form'
+import { PostForm } from './_components/PostForm'
 
 export default function NewPostPage(): JSX.Element {
   return (
@@ -598,19 +597,19 @@ import { Input } from '{{uiImport}}/input'
 import { Label } from '{{uiImport}}/label'
 import { Textarea } from '{{uiImport}}/textarea'
 
-import { createPost } from '../_actions/create-post'
-import { type PostInput, PostInputSchema } from '../schema'
+import { createPost } from './actions/create-post'
+import { type PostFormData, PostFormSchema } from './schema'
 
 export function PostForm(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
-  const form = useForm<PostInput>({
-    resolver: zodResolver(PostInputSchema),
+  const form = useForm<PostFormData>({
+    resolver: zodResolver(PostFormSchema),
     defaultValues: { title: '', body: '' },
   })
 
-  const onSubmit = async (values: PostInput): Promise<void> => {
+  const onSubmit = async (values: PostFormData): Promise<void> => {
     setError(null)
-    const result = await createPost(values)
+    const result = await createPost({ data: values })
     if (result?.error) {
       setError(result.error)
     }
@@ -627,7 +626,7 @@ export function PostForm(): JSX.Element {
           <p className="text-sm text-destructive">
             {form.formState.errors.title.message}
           </p>
-        ) : null}
+        ) : undefined}
       </div>
       <div className="space-y-2">
         <Label htmlFor="body">Body</Label>
@@ -636,9 +635,9 @@ export function PostForm(): JSX.Element {
           <p className="text-sm text-destructive">
             {form.formState.errors.body.message}
           </p>
-        ) : null}
+        ) : undefined}
       </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : undefined}
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? 'Saving…' : 'Publish'}
       </Button>
@@ -653,12 +652,12 @@ export function PostForm(): JSX.Element {
 export function postSchema() {
   return `import { z } from 'zod'
 
-export const PostInputSchema = z.object({
+export const PostFormSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   body: z.string().min(10, 'Body must be at least 10 characters'),
 })
 
-export type PostInput = z.infer<typeof PostInputSchema>
+export type PostFormData = z.infer<typeof PostFormSchema>
 `
 }
 
@@ -672,12 +671,16 @@ import { db } from '{{libImport}}/db'
 import { getServerSideSession } from '{{libImport}}/server/get-session'
 import { slugify } from '{{importPrefix}}shared/utils/slugify'
 
-import { type PostInput, PostInputSchema } from '../schema'
+import { type PostFormData, PostFormSchema } from '../schema'
 
-export async function createPost(
-  input: PostInput,
-): Promise<{ error: string } | undefined> {
-  const parsed = PostInputSchema.safeParse(input)
+interface Props {
+  readonly data: PostFormData
+}
+
+export async function createPost({
+  data,
+}: Props): Promise<{ error: string } | undefined> {
+  const parsed = PostFormSchema.safeParse(data)
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid post' }
   }
@@ -687,13 +690,19 @@ export async function createPost(
     return redirect('/login')
   }
 
-  await db.orm.public.Post.create({
-    title: parsed.data.title,
-    body: parsed.data.body,
-    slug: slugify(parsed.data.title),
-    published: true,
-    authorId: session.user.id,
-  })
+  try {
+    await db.orm.public.Post.create({
+      title: parsed.data.title,
+      body: parsed.data.body,
+      slug: slugify(parsed.data.title),
+      published: true,
+      authorId: session.user.id,
+    })
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not save the post',
+    }
+  }
 
   return redirect('/dashboard/posts')
 }

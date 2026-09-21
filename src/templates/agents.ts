@@ -23,9 +23,22 @@ This app was scaffolded with fullest-of-stacks. Follow **this file** and the Nex
 
 - Public UI lives under \`(app)/\`. Signed-in UI lives under \`(dashboard)/\`. The dashboard layout redirects to \`/login\` when there is no session.
 - Route handlers belong in \`app/api/*/route.ts\`. Auth is already mounted at \`/api/auth/[...all]\`.
-- Colocate a feature on its route: \`page.tsx\`, \`schema.ts\`, \`_components/\`, \`_actions/\`, and \`*.test.ts\`.
-- Server actions belong in \`_actions/\` on that route. Do not put route-specific actions in \`shared/\`.
+- Colocate a feature on its route: \`page.tsx\`, \`_components/\`, \`_actions/\`, and tests next to the file they cover.
+- Underscore folders (\`_components\`, \`_actions\`) only at the **route** level, so Next.js ignores them as routes. Nested folders inside a component (forms, schema, actions) are not underscored.
+- A **form** is a folder under the route's \`_components/\` (for example \`LoginForm/\`). That folder owns the presentational component, \`schema/\`, and \`actions/\`.
+- Server actions that belong to a form live in that form's \`actions/\` and import the schema from \`../schema\`. Do not put route-specific actions in \`shared/\`.
 - Shared UI, lib, utils, and hooks live under \`shared/\`. Route-only code does not.
+
+## Components
+
+- Follow **ESLint** and the patterns already in this repo. Do not add \`eslint-disable\` to make new code pass. Match existing naming, colocation, and imports.
+- Prefer abstractions. Extract helpers, shared UI, and repeated logic instead of growing one file.
+- When a component is too large or hard to read, split it. Route-only pieces go in \`_components/\` on that route. Reusable pieces go in \`shared/\`.
+- Keep components presentational. A component file should contain imports, the \`Props\` type, and the exported component — nothing else.
+- Put everything else in a colocated folder: extra UI in the route's \`_components/\`, form Zod schemas in that form's \`schema/\`, form server actions in that form's \`actions/\`, shared code in \`shared/\`. Route-level data loaders (not tied to a form) stay in the route's \`_actions/\`.
+- Name the props type \`Props\` and declare it as an \`interface\` immediately above the exported component. Destructure in the parameter list (\`({ children }: Props)\`), not via a \`props\` variable.
+- In JSX, prefer ternaries over \`&&\`. When the false branch renders nothing, use \`undefined\` — not \`null\` (\`condition ? <El /> : undefined\`). There is no dedicated React ESLint rule for preferring \`undefined\` over \`null\` (\`react/jsx-no-leaked-render\` even autofixes to \`null\`), so this starter encodes both checks with \`no-restricted-syntax\`.
+- Next.js route conventions stay in the route file: default page/layout exports, \`metadata\`, and root-layout font setup.
 
 ## Shared
 
@@ -52,10 +65,11 @@ This is **not** Prisma 7. There is no \`PrismaClient\`, \`findMany\`, or \`prism
 
 ## Zod
 
-- Validate every mutation at the server boundary with a Zod schema colocated as \`schema.ts\`.
-- Infer form/action types with \`z.infer<typeof Schema>\`. Do not declare parallel handwritten types.
-- Use the same schema from the client form (\`zodResolver\`) and the server action (\`safeParse\`).
-- Return field errors from \`safeParse\`; do not throw for expected validation failures.
+- Every form owns its Zod schema at \`_components/FormName/schema/index.ts\`. Export \`FormNameSchema\` and \`FormNameData\` (\`z.infer<typeof FormNameSchema>\`).
+- Never define a form schema inside the component file or as a route-level \`schema.ts\`.
+- The form and its server action share that schema: the client uses \`zodResolver(FormNameSchema)\`; the action \`safeParse\`s \`props.data\`.
+- Form actions take \`({ data }: Props)\` where \`Props\` is an \`interface\` with \`data: FormNameData\` (plus any extra server-only fields). Load the session on the server — do not trust a user id from the client.
+- Return field/action errors from \`safeParse\`; do not throw for expected validation failures.
 
 ## Auth
 
@@ -78,7 +92,7 @@ This is **not** Prisma 7. There is no \`PrismaClient\`, \`findMany\`, or \`prism
 ## Style
 
 - Prettier 3 defaults, with two TypeScript-community choices: no semicolons and single quotes. Print width 80, trailing commas, always wrap arrow-function parameters, LF line endings. \`prettier-plugin-tailwindcss\` sorts \`className\` lists.
-- ESLint: type-checked TypeScript, unused imports, simple-import-sort, and no \`process.env\` outside \`shared/lib/env.ts\`. Default exports are only for Next.js pages, layouts, routes, and config files.
+- ESLint: type-checked TypeScript, unused imports, simple-import-sort, no \`process.env\` outside \`shared/lib/env.ts\`, object shapes as \`interface\` (not \`type\`), and JSX ternaries that render nothing must use \`undefined\` (not \`null\` or \`&&\`). Default exports are only for Next.js pages, layouts, routes, and config files. Treat the linter as part of the contract — new code must pass it the same way existing files do.
 - Import alias is \`{{importPrefix}}\`. Do not introduce \`@/\` if the project uses \`~/\` (or the reverse).
 
 ${AGENTS_MARK_END}

@@ -13,17 +13,17 @@ export function testSupportFiles(_ctx: TemplateContext) {
 function factories() {
   return `import { factory, seq } from '@factory-js/factory'
 
-type User = {
+interface User {
   id: string
   name: string
   email: string
 }
 
-type Session = {
+interface Session {
   user: User
 }
 
-type Post = {
+interface Post {
   id: string
   title: string
   body: string
@@ -32,12 +32,12 @@ type Post = {
   authorId: string
 }
 
-type MagicLinkValues = {
+interface MagicLinkValues {
   name: string
   email: string
 }
 
-type PostInput = {
+interface PostInput {
   title: string
   body: string
 }

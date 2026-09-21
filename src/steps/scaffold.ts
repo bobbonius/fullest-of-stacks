@@ -66,13 +66,20 @@ export function writeScaffold(ctx: ProjectContext) {
     postListComponent(tpl)
   )
   writeText(path.join(ctx.projectDir, ctx.appDir, '(app)/login/page.tsx'), loginPage())
-  writeText(path.join(ctx.projectDir, ctx.appDir, '(app)/login/schema.ts'), loginSchema())
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/login-form.tsx'),
+    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/LoginForm/schema/index.ts'),
+    loginSchema()
+  )
+  writeText(
+    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/LoginForm/index.tsx'),
     loginForm(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_actions/request-magic-link.ts'),
+    path.join(
+      ctx.projectDir,
+      ctx.appDir,
+      '(app)/login/_components/LoginForm/actions/request-magic-link.ts'
+    ),
     requestMagicLinkAction(tpl)
   )
   writeText(
@@ -96,15 +103,23 @@ export function writeScaffold(ctx: ProjectContext) {
     newPostPage()
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/post-form.tsx'),
+    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/PostForm/index.tsx'),
     postForm(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/schema.ts'),
+    path.join(
+      ctx.projectDir,
+      ctx.appDir,
+      '(dashboard)/dashboard/posts/new/_components/PostForm/schema/index.ts'
+    ),
     postSchema()
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_actions/create-post.ts'),
+    path.join(
+      ctx.projectDir,
+      ctx.appDir,
+      '(dashboard)/dashboard/posts/new/_components/PostForm/actions/create-post.ts'
+    ),
     postActions(tpl)
   )
   writeText(path.join(ctx.projectDir, ctx.appDir, 'api/health/route.ts'), healthRoute())
@@ -149,12 +164,40 @@ function removeLegacyAuthFiles(ctx: ProjectContext) {
   removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/register/page.tsx'))
   removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/register/register-form.tsx'))
   removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/login-form.tsx'))
+  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/schema.ts'))
+  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/login-form.tsx'))
+  removeIfExists(
+    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_actions/request-magic-link.ts')
+  )
+  removeIfExists(
+    path.join(
+      ctx.projectDir,
+      ctx.appDir,
+      '(app)/login/_components/LoginForm/_actions/request-magic-link.ts'
+    )
+  )
   removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/actions.ts'))
   removeIfExists(
     path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/actions.ts')
   )
   removeIfExists(
+    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/schema.ts')
+  )
+  removeIfExists(
     path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/post-form.tsx')
+  )
+  removeIfExists(
+    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/post-form.tsx')
+  )
+  removeIfExists(
+    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_actions/create-post.ts')
+  )
+  removeIfExists(
+    path.join(
+      ctx.projectDir,
+      ctx.appDir,
+      '(dashboard)/dashboard/posts/new/_components/PostForm/_actions/create-post.ts'
+    )
   )
 }
 
@@ -225,7 +268,7 @@ Open \`/login\`, request a magic link, and click the highlighted URL on the page
 
 - Next.js App Router with \`(app)\` and \`(dashboard)\` route groups
 - Shared code under \`shared/\` (shadcn UI, lib, utils, hooks)
-- Route-specific components next to the page; server actions in \`_actions/\`
+- Route-specific UI next to the page; each form folder owns \`schema/\` and \`actions/\`
 - Better Auth magic links at \`/api/auth/*\` and \`/login\`
 - Prisma 8 contract in \`src/prisma\` (or \`prisma/\`) plus seeded homepage posts
 - Zod-validated create-post server action

@@ -28,7 +28,7 @@ export function devMagicLink() {
  * it to the browser.
  */
 
-type StoredMagicLink = {
+interface StoredMagicLink {
   email: string
   url: string
 }
