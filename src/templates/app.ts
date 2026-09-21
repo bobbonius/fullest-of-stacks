@@ -84,7 +84,7 @@ import { PostList } from './_components/post-list'
 
 export default async function HomePage(): Promise<JSX.Element> {
   const session = await getServerSideSession()
-  const { posts, setupError } = await getPublishedPosts()
+  const result = await getPublishedPosts()
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-8 p-8">
@@ -108,7 +108,11 @@ export default async function HomePage(): Promise<JSX.Element> {
           </Button>
         )}
       </div>
-      <PostList posts={posts} setupError={setupError} />
+      {'error' in result ? (
+        <p className="text-sm text-destructive">{result.error}</p>
+      ) : (
+        <PostList posts={result.posts} />
+      )}
     </main>
   )
 }
@@ -122,28 +126,20 @@ export function getPublishedPostsAction(ctx: TemplateContext) {
     `'use server'
 
 import { db } from '{{libImport}}/database/db'
-import { getDatabaseError } from '{{libImport}}/database/db-error'
+import {
+  type DatabaseActionError,
+  getDatabaseError,
+} from '{{libImport}}/database/db-error'
 import type { Post } from '{{libImport}}/database/models'
 
-export interface PublishedPostsResult {
-  posts: Post[]
-  setupError?: string
-}
-
-export async function getPublishedPosts(): Promise<PublishedPostsResult> {
+export async function getPublishedPosts(): Promise<
+  { posts: Post[] } | DatabaseActionError
+> {
   try {
     const posts = await db.orm.public.Post.where({ published: true }).all()
     return { posts }
   } catch (error: unknown) {
-    if (getDatabaseError(error).kind === 'unready') {
-      return {
-        posts: [],
-        setupError:
-          'The database is not ready. This app expects Postgres at localhost:{{databasePort}} / {{databaseName}}. From this app run \`{{packageManager}} db:init\`, then \`{{packageManager}} db:seed\`. To wipe local data and start over, run \`{{packageManager}} db:reset\`.',
-      }
-    }
-
-    throw error
+    return getDatabaseError(error)
   }
 }
 `,
@@ -160,33 +156,14 @@ import type { Post } from '{{libImport}}/database/models'
 
 interface Props {
   readonly posts: readonly Post[]
-  readonly setupError?: string
 }
 
-export function PostList({ posts, setupError }: Props): JSX.Element {
-  if (setupError) {
-    return (
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Latest posts</h2>
-        <div
-          role="status"
-          className="rounded-md border-2 border-amber-500 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-50"
-        >
-          <p className="font-semibold">Database is not initialized</p>
-          <p className="mt-1">{setupError}</p>
-        </div>
-      </section>
-    )
-  }
-
+export function PostList({ posts }: Props): JSX.Element {
   if (posts.length === 0) {
     return (
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Latest posts</h2>
-        <p className="text-sm text-muted-foreground">
-          No posts yet. After Postgres is up at localhost:{{databasePort}} / {{databaseName}}, run \`{{packageManager}} db:seed\`
-          to add sample posts.
-        </p>
+        <p className="text-sm text-muted-foreground">No posts yet.</p>
       </section>
     )
   }

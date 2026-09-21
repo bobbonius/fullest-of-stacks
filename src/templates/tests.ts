@@ -136,6 +136,18 @@ describe('HomePage', () => {
     expect(screen.getByText(post.title)).toBeInTheDocument()
     expect(screen.getByText(post.body)).toBeInTheDocument()
   })
+
+  test('shows a database error message', async () => {
+    vi.mocked(getServerSideSession).mockResolvedValue(null)
+    vi.mocked(getPublishedPosts).mockResolvedValue({
+      error: 'The database is not ready',
+      kind: 'unready',
+    })
+
+    render(await HomePage())
+
+    expect(screen.getByText('The database is not ready')).toBeInTheDocument()
+  })
 })
 `,
     ctx
@@ -169,22 +181,15 @@ describe('getPublishedPosts', () => {
     expect(dbMock.orm.public.Post.where).toHaveBeenCalledWith({ published: true })
   })
 
-  test('returns a setup error when the post table is missing', async () => {
+  test('returns a database error when the query fails', async () => {
     postQuery.all.mockRejectedValue(
       new Error('relation "public.post" does not exist')
     )
 
     await expect(getPublishedPosts()).resolves.toEqual({
-      posts: [],
-      setupError: expect.stringMatching(/db:init/i),
+      error: 'The database is not ready',
+      kind: 'unready',
     })
-  })
-
-  test('rethrows unexpected database errors', async () => {
-    const error = new Error('permission denied')
-    postQuery.all.mockRejectedValue(error)
-
-    await expect(getPublishedPosts()).rejects.toThrow(error)
   })
 })
 `,
@@ -219,17 +224,6 @@ describe('PostList', () => {
     render(<PostList posts={[post]} />)
     expect(screen.getByText(post.title)).toBeInTheDocument()
     expect(screen.getByText(post.body)).toBeInTheDocument()
-  })
-
-  test('shows database setup instructions', () => {
-    render(
-      <PostList
-        posts={[]}
-        setupError="Postgres is running, but the Prisma tables are not there yet."
-      />
-    )
-    expect(screen.getByText(/database is not initialized/i)).toBeInTheDocument()
-    expect(screen.getByText(/prisma tables are not there yet/i)).toBeInTheDocument()
   })
 })
 `,

@@ -12,6 +12,12 @@ export function agentsGuide(ctx: TemplateContext) {
 
 This app was scaffolded with fullest-of-stacks. Follow **this file** and the Next.js docs in \`node_modules/next/dist/docs/\` — not older Next.js or Prisma Client habits from training data.
 
+## Philosophy
+
+- **KISS (Keep It Simple, Stupid).** Prefer the smallest clear solution. Do not invent setup wizards, special-case "database not ready" flows, or defensive UI for problems you fix with \`db:init\` / \`db:seed\`.
+- When a server action or loader hits the database and fails, \`return getDatabaseError(error)\`. Do not branch on \`.kind === 'unready'\`, build long setup messages, or invent a parallel \`setupError\` field.
+- Optimize for readable code over hypothetical edge cases.
+
 ## Next.js
 
 - App Router only. Default to Server Components. Add \`'use client'\` only for interactive UI.
@@ -55,7 +61,7 @@ This is **not** Prisma 7. There is no \`PrismaClient\`, \`findMany\`, or \`prism
 - Contract: \`src/prisma/contract.ts\` or \`src/prisma/contract.prisma\`
 - Client: \`{{libImport}}/database/db\` → \`db.orm.public.Model\`
 - Model row types: \`Post\`, \`User\`, … from \`{{libImport}}/database/models\` (\`NonNullable<(typeof db.orm.public.Model)['_row']>\`). Do not hand-roll local copies of those shapes.
-- Database errors: \`getDatabaseError\` from \`{{libImport}}/database/db-error\` (check \`.kind\` for cases like \`unready\`)
+- Database errors: \`getDatabaseError\` from \`{{libImport}}/database/db-error\`. In \`catch\`, \`return getDatabaseError(error)\` — that is enough.
 - Reads: \`await db.orm.public.Post.where({ authorId }).all()\` or \`.first()\`
 - Writes: \`await db.orm.public.Post.create({ ... })\`
 - Primary keys are CUID2 values stored as \`text\` (\`@default(cuid(2))\`), so they match Better Auth. Prisma generates them on create; Better Auth uses the same generator via \`advanced.database.generateId\`. Do not use \`field.id.cuid2()\` — that maps to \`character(24)\`, which \`db init\` cannot alter from existing \`text\` columns.
@@ -85,7 +91,7 @@ When you add or change a Prisma model, update **every** dependent surface — do
 - The form and its server action share that schema: the client uses \`zodResolver(FormNameSchema)\`; the action \`safeParse\`s \`props.data\`.
 - Form actions take \`({ data }: Props)\` where \`Props\` is an \`interface\` with \`data: FormNameData\` (plus any extra server-only fields). Load the session on the server — do not trust a user id from the client.
 - Check authentication before \`safeParse\`. If there is no session, redirect or return early; do not parse the schema first.
-- Return field/action errors from \`safeParse\`; do not throw for expected validation failures. Map database failures with \`getDatabaseError\`.
+- Return field/action errors from \`safeParse\`; do not throw for expected validation failures. Map database failures with \`return getDatabaseError(error)\`.
 
 ## Auth
 
