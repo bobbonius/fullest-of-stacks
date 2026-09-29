@@ -3,7 +3,7 @@ import { t } from '../lib/template.ts'
 
 export function playwrightConfig(ctx: TemplateContext) {
   const webServer =
-    'node apps/web/node_modules/next/dist/bin/next dev --hostname localhost --port 3000'
+    'node apps/web/node_modules/next/dist/bin/next dev apps/web --hostname localhost --port 3000'
 
   return t(
     `import { config as loadEnv } from 'dotenv'
