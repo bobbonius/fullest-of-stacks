@@ -21,6 +21,9 @@ out
 build
 dist
 coverage
+test-results
+playwright-report
+blob-report
 pnpm-lock.yaml
 package-lock.yaml
 package-lock.json

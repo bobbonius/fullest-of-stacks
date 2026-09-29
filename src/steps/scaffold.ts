@@ -1,9 +1,9 @@
-import { existsSync, unlinkSync } from 'node:fs'
+import { existsSync, renameSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
 
 import { exists, readOptional, removeIfEmpty, writeText } from '../lib/fs.ts'
 import type { ProjectContext } from '../lib/project.ts'
-import { srcFile } from '../lib/project.ts'
+import { packageFile, srcFile } from '../lib/project.ts'
 import { toTemplateContext } from '../lib/template.ts'
 import {
   dashboardActions,
@@ -38,6 +38,7 @@ import {
 } from '../templates/agents.ts'
 import { generatedTests } from '../templates/tests.ts'
 import { testSupportFiles } from '../templates/test-support.ts'
+import { generatedE2eFiles } from '../templates/playwright.ts'
 
 function asTemplate(ctx: ProjectContext) {
   return toTemplateContext(ctx)
@@ -51,64 +52,64 @@ function removeIfExists(filePath: string) {
 
 export function writeScaffold(ctx: ProjectContext) {
   const tpl = asTemplate(ctx)
-  const layoutPath = path.join(ctx.projectDir, ctx.appDir, 'layout.tsx')
+  const layoutPath = path.join(ctx.appRoot, ctx.appDir, 'layout.tsx')
 
   writeText(layoutPath, rootLayout(tpl, readOptional(layoutPath)))
   patchGeneratedCss(ctx)
 
-  writeText(path.join(ctx.projectDir, ctx.appDir, '(app)/page.tsx'), homePage(tpl))
+  writeText(path.join(ctx.appRoot, ctx.appDir, '(app)/page.tsx'), homePage(tpl))
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/_actions/get-published-posts.ts'),
+    path.join(ctx.appRoot, ctx.appDir, '(app)/_actions/getPublishedPosts.ts'),
     getPublishedPostsAction(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/_components/post-list.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(app)/_components/PostList.tsx'),
     postListComponent(tpl)
   )
-  writeText(path.join(ctx.projectDir, ctx.appDir, '(app)/login/page.tsx'), loginPage())
+  writeText(path.join(ctx.appRoot, ctx.appDir, '(app)/login/page.tsx'), loginPage())
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/LoginForm/schema/index.ts'),
+    path.join(ctx.appRoot, ctx.appDir, '(app)/login/_components/LoginForm/schema/index.ts'),
     loginSchema()
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/LoginForm/index.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(app)/login/_components/LoginForm/index.tsx'),
     loginForm(tpl)
   )
   writeText(
     path.join(
-      ctx.projectDir,
+      ctx.appRoot,
       ctx.appDir,
-      '(app)/login/_components/LoginForm/actions/request-magic-link.ts'
+      '(app)/login/_components/LoginForm/actions/requestMagicLink.ts'
     ),
     requestMagicLinkAction(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/layout.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/layout.tsx'),
     dashboardLayout(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/page.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/page.tsx'),
     dashboardPage(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/_actions/sign-out.ts'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/_actions/signOutAction.ts'),
     dashboardActions(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/page.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/page.tsx'),
     postsPage(tpl)
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/page.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/page.tsx'),
     newPostPage()
   )
   writeText(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/PostForm/index.tsx'),
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/PostForm/index.tsx'),
     postForm(tpl)
   )
   writeText(
     path.join(
-      ctx.projectDir,
+      ctx.appRoot,
       ctx.appDir,
       '(dashboard)/dashboard/posts/new/_components/PostForm/schema/index.ts'
     ),
@@ -116,36 +117,42 @@ export function writeScaffold(ctx: ProjectContext) {
   )
   writeText(
     path.join(
-      ctx.projectDir,
+      ctx.appRoot,
       ctx.appDir,
-      '(dashboard)/dashboard/posts/new/_components/PostForm/actions/create-post.ts'
+      '(dashboard)/dashboard/posts/new/_components/PostForm/actions/createPost.ts'
     ),
     postActions(tpl)
   )
-  writeText(path.join(ctx.projectDir, ctx.appDir, 'api/health/route.ts'), healthRoute())
-  writeText(path.join(ctx.projectDir, ctx.appDir, 'api/posts/route.ts'), postsApi(tpl))
+  writeText(path.join(ctx.appRoot, ctx.appDir, 'api/health/route.ts'), healthRoute())
+  writeText(path.join(ctx.appRoot, ctx.appDir, 'api/posts/route.ts'), postsApi(tpl))
 
-  writeText(srcFile(ctx, 'prisma/seed.ts'), seed(tpl))
-  writeText(srcFile(ctx, 'prisma/reset.ts'), resetDatabase(tpl))
+  writeText(packageFile(ctx, 'database', 'prisma/seed.ts'), seed(tpl))
+  writeText(packageFile(ctx, 'database', 'prisma/reset.ts'), resetDatabase(tpl))
 
   for (const [relative, contents] of Object.entries({
     ...testSupportFiles(tpl),
     ...generatedTests(tpl),
+    ...generatedE2eFiles(tpl),
   })) {
-    writeText(srcFile(ctx, relative), contents)
+    if (relative.startsWith('packages/') || relative.startsWith('e2e/') || relative === 'playwright.config.ts') {
+      writeText(path.join(ctx.projectDir, relative), contents)
+    } else {
+      writeText(srcFile(ctx, relative), contents)
+    }
   }
 
   writeText(path.join(ctx.projectDir, '.vscode/settings.json'), vscodeSettings())
   writeText(path.join(ctx.projectDir, '.vscode/extensions.json'), vscodeExtensions())
 
-  const nextConfigPath = path.join(ctx.projectDir, 'next.config.ts')
-  const nextConfigMjs = path.join(ctx.projectDir, 'next.config.mjs')
-  if (exists(nextConfigPath) || !exists(nextConfigMjs)) {
+  const nextConfigPath = path.join(ctx.appRoot, 'next.config.ts')
+  const nextConfigJs = path.join(ctx.appRoot, 'next.config.js')
+  const nextConfigMjs = path.join(ctx.appRoot, 'next.config.mjs')
+  if (exists(nextConfigPath) || (!exists(nextConfigMjs) && !exists(nextConfigJs))) {
     writeText(nextConfigPath, nextConfigSnippet())
   }
 
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, 'page.tsx'))
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, 'page.module.css'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, 'page.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, 'page.module.css'))
   removeLegacyAuthFiles(ctx)
 
   patchGitignore(ctx.projectDir)
@@ -154,71 +161,118 @@ export function writeScaffold(ctx: ProjectContext) {
 }
 
 function patchGeneratedCss(ctx: ProjectContext) {
-  const cssPath = path.join(ctx.projectDir, ctx.appDir, 'globals.css')
-  const current = readOptional(cssPath)
+  const appCssDir = path.join(ctx.appRoot, ctx.appDir)
+  const globalsPath = path.join(appCssDir, 'globals.css')
+  const nxGlobalPath = path.join(appCssDir, 'global.css')
+
+  // Nx next preset ships global.css; our templates use globals.css.
+  if (!exists(globalsPath) && exists(nxGlobalPath)) {
+    renameSync(nxGlobalPath, globalsPath)
+  }
+
+  const current = readOptional(globalsPath)
   if (!current) return
-  writeText(cssPath, patchGlobalsCss(current))
+  writeText(globalsPath, patchGlobalsCss(current))
 }
 
 function removeLegacyAuthFiles(ctx: ProjectContext) {
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/register/page.tsx'))
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/register/register-form.tsx'))
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/login-form.tsx'))
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/schema.ts'))
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(app)/login/_components/login-form.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/register/page.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/register/register-form.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/login/login-form.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/login/schema.ts'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/login/_components/login-form.tsx'))
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(app)/login/_actions/request-magic-link.ts')
+    path.join(ctx.appRoot, ctx.appDir, '(app)/login/_actions/request-magic-link.ts')
+  )
+  removeIfExists(
+    path.join(ctx.appRoot, ctx.appDir, '(app)/login/_actions/requestMagicLink.ts')
   )
   removeIfExists(
     path.join(
-      ctx.projectDir,
+      ctx.appRoot,
       ctx.appDir,
       '(app)/login/_components/LoginForm/_actions/request-magic-link.ts'
     )
   )
-  removeIfExists(path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/actions.ts'))
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/actions.ts')
+    path.join(
+      ctx.appRoot,
+      ctx.appDir,
+      '(app)/login/_components/LoginForm/actions/request-magic-link.ts'
+    )
+  )
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/_actions/get-published-posts.ts'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(app)/_components/post-list.tsx'))
+  removeIfExists(path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/actions.ts'))
+  removeIfExists(
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/_actions/sign-out.ts')
   )
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/schema.ts')
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/actions.ts')
   )
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/post-form.tsx')
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/schema.ts')
   )
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/post-form.tsx')
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/post-form.tsx')
   )
   removeIfExists(
-    path.join(ctx.projectDir, ctx.appDir, '(dashboard)/dashboard/posts/new/_actions/create-post.ts')
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/_components/post-form.tsx')
+  )
+  removeIfExists(
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/_actions/create-post.ts')
+  )
+  removeIfExists(
+    path.join(ctx.appRoot, ctx.appDir, '(dashboard)/dashboard/posts/new/_actions/createPost.ts')
   )
   removeIfExists(
     path.join(
-      ctx.projectDir,
+      ctx.appRoot,
       ctx.appDir,
       '(dashboard)/dashboard/posts/new/_components/PostForm/_actions/create-post.ts'
+    )
+  )
+  removeIfExists(
+    path.join(
+      ctx.appRoot,
+      ctx.appDir,
+      '(dashboard)/dashboard/posts/new/_components/PostForm/actions/create-post.ts'
     )
   )
   removeLegacyLibFiles(ctx)
 }
 
 function removeLegacyLibFiles(ctx: ProjectContext) {
-  const sharedRoot = path.join(ctx.projectDir, ctx.sharedRoot)
+  const sharedRoot = path.join(ctx.appRoot, ctx.sharedRoot)
   const legacyLibFiles = [
     'lib/env.ts',
     'lib/auth.ts',
     'lib/auth-client.ts',
+    'lib/authClient.ts',
     'lib/db.ts',
     'lib/dev-magic-link.ts',
+    'lib/devMagicLink.ts',
     'lib/server/get-session.ts',
+    'lib/server/getSession.ts',
     'lib/env.test.ts',
     'lib/auth.test.ts',
     'lib/auth-client.test.ts',
+    'lib/authClient.test.ts',
     'lib/db.test.ts',
     'lib/dev-magic-link.test.ts',
+    'lib/devMagicLink.test.ts',
     'lib/server/get-session.test.ts',
+    'lib/server/getSession.test.ts',
     'utils/slugify.ts',
     'utils/slugify.test.ts',
+    'libs/auth/auth-client.ts',
+    'libs/auth/auth-client.test.ts',
+    'libs/magic-link/dev-magic-link.ts',
+    'libs/magic-link/dev-magic-link.test.ts',
+    'libs/server/get-session.ts',
+    'libs/server/get-session.test.ts',
+    'libs/database/db-error.ts',
+    'libs/database/db-error.test.ts',
   ]
 
   for (const relative of legacyLibFiles) {
@@ -233,8 +287,21 @@ function removeLegacyLibFiles(ctx: ProjectContext) {
 function patchGitignore(projectDir: string) {
   const gitignorePath = path.join(projectDir, '.gitignore')
   const current = readOptional(gitignorePath) ?? ''
-  if (!current.includes('!.env.example')) {
-    writeText(gitignorePath, `${current.trimEnd()}\n\n!.env.example\n`)
+  const extras = [
+    '!.env.example',
+    '/test-results/',
+    '/playwright-report/',
+    '/blob-report/',
+    '/playwright/.cache/',
+  ]
+  let next = current
+  for (const line of extras) {
+    if (!next.includes(line)) {
+      next = `${next.trimEnd()}\n${line}\n`
+    }
+  }
+  if (next !== current) {
+    writeText(gitignorePath, next.endsWith('\n') ? next : `${next}\n`)
   }
 }
 
@@ -301,14 +368,16 @@ Open \`/login\`, request a magic link, and click the highlighted URL on the page
 
 ### What's included
 
+- Nx monorepo with \`apps/web\` and workspace packages (\`env\`, \`database\`, \`auth\`, \`utils\`)
 - Next.js App Router with \`(app)\` and \`(dashboard)\` route groups
-- Shared code under \`shared/\` (shadcn UI, lib, utils, hooks)
+- App-local UI under \`apps/web/src/shared/\` (shadcn); domain libs in \`packages/\`
 - Route-specific UI next to the page; each form folder owns \`schema/\` and \`actions/\`
 - Better Auth magic links at \`/api/auth/*\` and \`/login\`
-- Prisma 8 contract in \`src/prisma\` (or \`prisma/\`) plus seeded homepage posts
-- Zod-validated create-post server action
+- Prisma 8 contract in \`packages/database/prisma\` plus seeded homepage posts
+- Zod-validated createPost server action
 - Vitest + Testing Library + factory-js, with coverage on generated files (\`pnpm test:coverage\`)
-- ESLint (type-checked TypeScript, import sort, no \`process.env\` outside \`shared/libs/env/env.ts\`) and Prettier (no semicolons, single quotes, Tailwind class sort)
+- Playwright e2e for home, magic-link auth, and create-post journeys (\`pnpm test:e2e\`)
+- ESLint (type-checked TypeScript, import sort, no \`process.env\` outside \`packages/env\`) and Prettier (no semicolons, single quotes, Tailwind class sort)
 `
   if (!current.includes('fullest-of-stacks')) {
     writeText(readmePath, `${current.trimEnd()}\n${extra}`)

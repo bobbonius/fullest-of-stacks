@@ -74,10 +74,14 @@ const config = [
       'dist/**',
       'build/**',
       'coverage/**',
+      'test-results/**',
+      'playwright-report/**',
+      'blob-report/**',
       'src/shared/components/ui/**',
       'shared/components/ui/**',
       '**/prisma/generated/**',
       'src/prisma/generated/**',
+      'apps/web/src/shared/components/ui/**',
     ],
   },
 
@@ -245,7 +249,7 @@ const config = [
           paths: [
             {
               name: '@prisma/client',
-              message: 'Prisma 8 uses db.orm from shared/libs/database/db, not PrismaClient.',
+              message: 'Prisma 8 uses db.orm from @scope/database/db, not PrismaClient.',
             },
             {
               name: 'better-auth/adapters/prisma',
@@ -333,7 +337,7 @@ const config = [
   },
 
   {
-    files: ['**/shared/libs/env/env.ts', '**/lib/env.ts'],
+    files: ['**/packages/env/src/env.ts', '**/shared/libs/env/env.ts', '**/lib/env.ts'],
     rules: {
       'n/no-process-env': 'off',
     },

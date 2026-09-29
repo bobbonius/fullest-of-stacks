@@ -2,10 +2,18 @@ import type { TemplateContext } from '../lib/template.ts'
 import { t } from '../lib/template.ts'
 
 export function envModule() {
-  return `import { config as loadEnv } from 'dotenv'
+  return `import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { config as loadEnv } from 'dotenv'
 
-loadEnv({ path: '.env.local' })
-loadEnv()
+// Resolve the monorepo root so Next (cwd: apps/web) still loads root .env.local.
+const workspaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../..'
+)
+
+loadEnv({ path: path.join(workspaceRoot, '.env.local') })
+loadEnv({ path: path.join(workspaceRoot, '.env') })
 
 export const env = {
   databaseUrl: process.env.DATABASE_URL,
@@ -15,6 +23,7 @@ export const env = {
 }
 `
 }
+
 
 export function devMagicLink() {
   return `/**
@@ -28,23 +37,16 @@ export function devMagicLink() {
  * it to the browser.
  */
 
-interface StoredMagicLink {
-  email: string
-  url: string
-}
-
-let lastMagicLink: StoredMagicLink | null = null
+const magicLinks = new Map<string, string>()
 
 export function rememberMagicLink(email: string, url: string): void {
-  lastMagicLink = { email, url }
+  magicLinks.set(email, url)
 }
 
 export function takeLastMagicLink(email: string): string | undefined {
-  if (!lastMagicLink || lastMagicLink.email !== email) {
-    return undefined
-  }
-
-  return lastMagicLink.url
+  const url = magicLinks.get(email)
+  magicLinks.delete(email)
+  return url
 }
 `
 }
@@ -57,8 +59,8 @@ import { nextCookies } from 'better-auth/next-js'
 import { magicLink } from 'better-auth/plugins'
 import { Pool } from 'pg'
 
-import { env } from '{{libImport}}/env/env'
-import { rememberMagicLink } from '{{libImport}}/magic-link/dev-magic-link'
+import { env } from '{{envImport}}'
+import { rememberMagicLink } from '{{authImport}}/devMagicLink'
 
 export const auth = betterAuth({
   appName: '{{projectName}}',
@@ -94,7 +96,7 @@ export function authClient(ctx: TemplateContext) {
     `import { magicLinkClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 
-import { env } from '{{libImport}}/env/env'
+import { env } from '{{envImport}}'
 
 export const authClient = createAuthClient({
   baseURL: env.betterAuthUrl,
@@ -111,7 +113,7 @@ export function authRoute(ctx: TemplateContext) {
   return t(
     `import { toNextJsHandler } from 'better-auth/next-js'
 
-import { auth } from '{{libImport}}/auth/auth'
+import { auth } from '{{authImport}}/auth'
 
 export const { POST, GET } = toNextJsHandler(auth)
 `,
@@ -125,7 +127,7 @@ export function getSession(ctx: TemplateContext) {
 
 import { headers } from 'next/headers'
 
-import { auth } from '{{libImport}}/auth/auth'
+import { auth } from '{{authImport}}/auth'
 
 export async function getServerSideSession(): Promise<
   Awaited<ReturnType<typeof auth.api.getSession>>
@@ -153,7 +155,7 @@ export function dbFallback(ctx: TemplateContext) {
   return t(
     `import postgres from '@prisma/orm-postgres/runtime'
 
-import { env } from '{{libImport}}/env/env'
+import { env } from '{{envImport}}'
 
 const connectionString = env.databaseUrl
 
@@ -171,7 +173,7 @@ export const db = postgres({
 
 export function dbModels(ctx: TemplateContext) {
   return t(
-    `import { db } from '{{libImport}}/database/db'
+    `import { db } from '{{databaseImport}}/db'
 
 export type Account = NonNullable<(typeof db.orm.public.Account)['_row']>
 export type Post = NonNullable<(typeof db.orm.public.Post)['_row']>

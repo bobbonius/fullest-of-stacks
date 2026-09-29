@@ -77,10 +77,10 @@ export function homePage(ctx: TemplateContext) {
 import type { JSX } from 'react'
 
 import { Button } from '{{uiImport}}/button'
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 
-import { getPublishedPosts } from './_actions/get-published-posts'
-import { PostList } from './_components/post-list'
+import { getPublishedPosts } from './_actions/getPublishedPosts'
+import { PostList } from './_components/PostList'
 
 export default async function HomePage(): Promise<JSX.Element> {
   const session = await getServerSideSession()
@@ -125,12 +125,12 @@ export function getPublishedPostsAction(ctx: TemplateContext) {
   return t(
     `'use server'
 
-import { db } from '{{libImport}}/database/db'
+import { db } from '{{databaseImport}}/db'
 import {
   type DatabaseActionError,
   getDatabaseError,
-} from '{{libImport}}/database/db-error'
-import type { Post } from '{{libImport}}/database/models'
+} from '{{databaseImport}}/dbError'
+import type { Post } from '{{databaseImport}}/models'
 
 export async function getPublishedPosts(): Promise<
   { posts: Post[] } | DatabaseActionError
@@ -152,7 +152,7 @@ export function postListComponent(ctx: TemplateContext) {
     `import type { JSX } from 'react'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '{{uiImport}}/card'
-import type { Post } from '{{libImport}}/database/models'
+import type { Post } from '{{databaseImport}}/models'
 
 interface Props {
   readonly posts: readonly Post[]
@@ -224,9 +224,9 @@ export function requestMagicLinkAction(ctx: TemplateContext) {
 
 import { headers } from 'next/headers'
 
-import { auth } from '{{libImport}}/auth/auth'
-import { env } from '{{libImport}}/env/env'
-import { takeLastMagicLink } from '{{libImport}}/magic-link/dev-magic-link'
+import { auth } from '{{authImport}}/auth'
+import { env } from '{{envImport}}'
+import { takeLastMagicLink } from '{{authImport}}/devMagicLink'
 
 import { type LoginFormData, LoginFormSchema } from '../schema'
 
@@ -283,7 +283,7 @@ import { Button } from '{{uiImport}}/button'
 import { Input } from '{{uiImport}}/input'
 import { Label } from '{{uiImport}}/label'
 
-import { requestMagicLink } from './actions/request-magic-link'
+import { requestMagicLink } from './actions/requestMagicLink'
 import { type LoginFormData, LoginFormSchema } from './schema'
 
 export function LoginForm(): JSX.Element {
@@ -326,7 +326,7 @@ export function LoginForm(): JSX.Element {
           This page prints the magic-link URL so you can try auth without an
           email provider. Delete the preview,{' '}
           <code className="rounded bg-amber-200/80 px-1 dark:bg-amber-800">
-            shared/libs/magic-link/dev-magic-link.ts
+            shared/libs/magic-link/devMagicLink.ts
           </code>
           , and the <code className="rounded bg-amber-200/80 px-1 dark:bg-amber-800">sendMagicLink</code>{' '}
           store-and-print callback before you ship.
@@ -386,7 +386,7 @@ export function dashboardLayout(ctx: TemplateContext) {
     `import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 
 interface Props {
   readonly children: ReactNode
@@ -414,9 +414,9 @@ export function dashboardPage(ctx: TemplateContext) {
 import type { JSX } from 'react'
 
 import { Button } from '{{uiImport}}/button'
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 
-import { signOutAction } from './_actions/sign-out'
+import { signOutAction } from './_actions/signOutAction'
 
 export default async function DashboardPage(): Promise<JSX.Element> {
   const session = await getServerSideSession()
@@ -454,7 +454,7 @@ export function dashboardActions(ctx: TemplateContext) {
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { auth } from '{{libImport}}/auth/auth'
+import { auth } from '{{authImport}}/auth'
 
 export async function signOutAction(): Promise<never> {
   await auth.api.signOut({
@@ -473,8 +473,8 @@ export function postsPage(ctx: TemplateContext) {
 import type { JSX } from 'react'
 
 import { Button } from '{{uiImport}}/button'
-import { db } from '{{libImport}}/database/db'
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { db } from '{{databaseImport}}/db'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 
 export default async function PostsPage(): Promise<JSX.Element> {
   const session = await getServerSideSession()
@@ -546,7 +546,7 @@ import { Input } from '{{uiImport}}/input'
 import { Label } from '{{uiImport}}/label'
 import { Textarea } from '{{uiImport}}/textarea'
 
-import { createPost } from './actions/create-post'
+import { createPost } from './actions/createPost'
 import { type PostFormData, PostFormSchema } from './schema'
 
 export function PostForm(): JSX.Element {
@@ -616,9 +616,9 @@ export function postActions(ctx: TemplateContext) {
 
 import { redirect } from 'next/navigation'
 
-import { db } from '{{libImport}}/database/db'
-import { getDatabaseError } from '{{libImport}}/database/db-error'
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { db } from '{{databaseImport}}/db'
+import { getDatabaseError } from '{{databaseImport}}/dbError'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { slugify } from '{{utilsImport}}/slugify'
 
 import { type PostFormData, PostFormSchema } from '../schema'
@@ -671,8 +671,8 @@ export function healthRoute() {
 
 export function postsApi(ctx: TemplateContext) {
   return t(
-    `import { db } from '{{libImport}}/database/db'
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+    `import { db } from '{{databaseImport}}/db'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 
 export async function GET(): Promise<Response> {
   const session = await getServerSideSession()
@@ -690,9 +690,9 @@ export async function GET(): Promise<Response> {
 
 export function seed(ctx: TemplateContext) {
   return t(
-    `import '{{libImport}}/env/env'
+    `import '{{envImport}}'
 
-import { db } from '{{libImport}}/database/db'
+import { db } from '{{databaseImport}}/db'
 
 const SEED_POSTS = [
   {
@@ -762,7 +762,7 @@ export function resetDatabase(ctx: TemplateContext) {
   return t(
     `import { Pool } from 'pg'
 
-import { env } from '{{libImport}}/env/env'
+import { env } from '{{envImport}}'
 
 export async function resetDatabase(): Promise<void> {
   if (!env.databaseUrl) {
@@ -810,7 +810,8 @@ export function vscodeSettings() {
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "eslint.execArgv": ["--max-old-space-size=8192"],
   "vitest.enable": true,
-  "vitest.include": ["**/*.test.{ts,tsx}"]
+  "vitest.include": ["apps/**/*.test.{ts,tsx}", "packages/**/*.test.{ts,tsx}"],
+  "vitest.exclude": ["**/e2e/**", "**/node_modules/**"]
 }
 `
 }
@@ -821,7 +822,8 @@ export function vscodeExtensions() {
     "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
     "Prisma.prisma",
-    "vitest.explorer"
+    "vitest.explorer",
+    "ms-playwright.playwright"
   ]
 }
 `

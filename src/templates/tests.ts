@@ -5,35 +5,35 @@ export function generatedTests(ctx: TemplateContext) {
   return {
     'app/layout.test.tsx': rootLayoutTest(ctx),
     'app/(app)/page.test.tsx': homePageTest(ctx),
-    'app/(app)/_actions/get-published-posts.test.ts': getPublishedPostsTest(ctx),
-    'app/(app)/_components/post-list.test.tsx': postListTest(ctx),
+    'app/(app)/_actions/getPublishedPosts.test.ts': getPublishedPostsTest(ctx),
+    'app/(app)/_components/PostList.test.tsx': postListTest(ctx),
     'app/(app)/login/page.test.tsx': loginPageTest(),
     'app/(app)/login/_components/LoginForm/schema/index.test.ts': loginSchemaTest(ctx),
     'app/(app)/login/_components/LoginForm/index.test.tsx': loginFormTest(ctx),
-    'app/(app)/login/_components/LoginForm/actions/request-magic-link.test.ts':
+    'app/(app)/login/_components/LoginForm/actions/requestMagicLink.test.ts':
       requestMagicLinkTest(ctx),
     'app/(dashboard)/layout.test.tsx': dashboardLayoutTest(ctx),
     'app/(dashboard)/dashboard/page.test.tsx': dashboardPageTest(ctx),
-    'app/(dashboard)/dashboard/_actions/sign-out.test.ts': dashboardActionsTest(ctx),
+    'app/(dashboard)/dashboard/_actions/signOutAction.test.ts': dashboardActionsTest(ctx),
     'app/(dashboard)/dashboard/posts/page.test.tsx': postsPageTest(ctx),
     'app/(dashboard)/dashboard/posts/new/page.test.tsx': newPostPageTest(),
     'app/(dashboard)/dashboard/posts/new/_components/PostForm/index.test.tsx': postFormTest(ctx),
     'app/(dashboard)/dashboard/posts/new/_components/PostForm/schema/index.test.ts':
       postSchemaTest(ctx),
-    'app/(dashboard)/dashboard/posts/new/_components/PostForm/actions/create-post.test.ts':
+    'app/(dashboard)/dashboard/posts/new/_components/PostForm/actions/createPost.test.ts':
       postActionsTest(ctx),
     'app/api/health/route.test.ts': healthRouteTest(),
     'app/api/posts/route.test.ts': postsApiTest(ctx),
     'app/api/auth/[...all]/route.test.ts': authRouteTest(ctx),
-    'shared/libs/auth/auth.test.ts': authServerTest(ctx),
-    'shared/libs/auth/auth-client.test.ts': authClientTest(ctx),
-    'shared/libs/magic-link/dev-magic-link.test.ts': devMagicLinkTest(),
-    'shared/libs/server/get-session.test.ts': getSessionTest(ctx),
-    'shared/libs/database/db.test.ts': dbTest(ctx),
-    'shared/libs/database/db-error.test.ts': dbErrorTest(),
-    'shared/libs/env/env.test.ts': envTest(),
-    'prisma/seed.test.ts': seedTest(ctx),
-    'prisma/reset.test.ts': resetTest(ctx),
+    'packages/auth/src/auth.test.ts': authServerTest(ctx),
+    'packages/auth/src/authClient.test.ts': authClientTest(ctx),
+    'packages/auth/src/devMagicLink.test.ts': devMagicLinkTest(),
+    'shared/libs/server/getSession.test.ts': getSessionTest(ctx),
+    'packages/database/src/db.test.ts': dbTest(ctx),
+    'packages/database/src/dbError.test.ts': dbErrorTest(),
+    'packages/env/src/env.test.ts': envTest(),
+    'packages/database/prisma/seed.test.ts': seedTest(ctx),
+    'packages/database/prisma/reset.test.ts': resetTest(ctx),
   } satisfies Record<string, string>
 }
 
@@ -76,17 +76,17 @@ function homePageTest(ctx: TemplateContext) {
     `import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { postFactory, sessionFactory } from '{{importPrefix}}test/factories'
 
-import { getPublishedPosts } from './_actions/get-published-posts'
+import { getPublishedPosts } from './_actions/getPublishedPosts'
 import HomePage from './page'
 
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
-vi.mock('./_actions/get-published-posts', () => ({
+vi.mock('./_actions/getPublishedPosts', () => ({
   getPublishedPosts: vi.fn(),
 }))
 vi.mock('{{uiImport}}/card', () => ({
@@ -161,9 +161,9 @@ function getPublishedPostsTest(ctx: TemplateContext) {
 import { postFactory } from '{{importPrefix}}test/factories'
 import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
-import { getPublishedPosts } from './get-published-posts'
+import { getPublishedPosts } from './getPublishedPosts'
 
-vi.mock('{{libImport}}/database/db', async () => {
+vi.mock('{{databaseImport}}/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
@@ -204,7 +204,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import { postFactory } from '{{importPrefix}}test/factories'
 
-import { PostList } from './post-list'
+import { PostList } from './PostList'
 
 vi.mock('{{uiImport}}/card', () => ({
   Card: ({ children }: { children?: unknown }) => <div>{children}</div>,
@@ -285,10 +285,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { magicLinkValuesFactory } from '{{importPrefix}}test/factories'
 
-import { requestMagicLink } from './actions/request-magic-link'
+import { requestMagicLink } from './actions/requestMagicLink'
 import { LoginForm } from '.'
 
-vi.mock('./actions/request-magic-link', () => ({
+vi.mock('./actions/requestMagicLink', () => ({
   requestMagicLink: vi.fn(),
 }))
 
@@ -364,7 +364,7 @@ function requestMagicLinkTest(ctx: TemplateContext) {
 
 import { magicLinkValuesFactory } from '{{importPrefix}}test/factories'
 
-import { requestMagicLink } from './request-magic-link'
+import { requestMagicLink } from './requestMagicLink'
 
 const { signInMagicLink, headers, takeLastMagicLink, envState } = vi.hoisted(() => ({
   signInMagicLink: vi.fn(),
@@ -374,13 +374,13 @@ const { signInMagicLink, headers, takeLastMagicLink, envState } = vi.hoisted(() 
 }))
 
 vi.mock('next/headers', () => ({ headers }))
-vi.mock('{{libImport}}/auth/auth', () => ({
+vi.mock('{{authImport}}/auth', () => ({
   auth: { api: { signInMagicLink } },
 }))
-vi.mock('{{libImport}}/env/env', () => ({
+vi.mock('{{envImport}}', () => ({
   env: envState,
 }))
-vi.mock('{{libImport}}/magic-link/dev-magic-link', () => ({
+vi.mock('{{authImport}}/devMagicLink', () => ({
   takeLastMagicLink,
 }))
 
@@ -443,14 +443,14 @@ function dashboardLayoutTest(ctx: TemplateContext) {
     `import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { sessionFactory } from '{{importPrefix}}test/factories'
 import { redirect } from '{{importPrefix}}test/mocks/navigation'
 
 import DashboardLayout from './layout'
 
 vi.mock('next/navigation', async () => import('{{importPrefix}}test/mocks/navigation'))
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
@@ -490,16 +490,16 @@ function dashboardPageTest(ctx: TemplateContext) {
     `import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { sessionFactory } from '{{importPrefix}}test/factories'
 
 import DashboardPage from './page'
 
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
-vi.mock('./_actions/sign-out', () => ({
+vi.mock('./_actions/signOutAction', () => ({
   signOutAction: vi.fn(),
 }))
 
@@ -535,7 +535,7 @@ function dashboardActionsTest(ctx: TemplateContext) {
 
 import { redirect } from '{{importPrefix}}test/mocks/navigation'
 
-import { signOutAction } from './sign-out'
+import { signOutAction } from './signOutAction'
 
 const { signOut, headers } = vi.hoisted(() => ({
   signOut: vi.fn(),
@@ -544,7 +544,7 @@ const { signOut, headers } = vi.hoisted(() => ({
 
 vi.mock('next/headers', () => ({ headers }))
 vi.mock('next/navigation', async () => import('{{importPrefix}}test/mocks/navigation'))
-vi.mock('{{libImport}}/auth/auth', () => ({
+vi.mock('{{authImport}}/auth', () => ({
   auth: { api: { signOut } },
 }))
 
@@ -572,17 +572,17 @@ function postsPageTest(ctx: TemplateContext) {
     `import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { postFactory, sessionFactory } from '{{importPrefix}}test/factories'
 import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import PostsPage from './page'
 
-vi.mock('{{libImport}}/database/db', async () => {
+vi.mock('{{databaseImport}}/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
@@ -664,10 +664,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { postInputFactory } from '{{importPrefix}}test/factories'
 
-import { createPost } from './actions/create-post'
+import { createPost } from './actions/createPost'
 import { PostForm } from '.'
 
-vi.mock('./actions/create-post', () => ({
+vi.mock('./actions/createPost', () => ({
   createPost: vi.fn(),
 }))
 
@@ -754,19 +754,19 @@ function postActionsTest(ctx: TemplateContext) {
   return t(
     `import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { postInputFactory, sessionFactory } from '{{importPrefix}}test/factories'
 import { dbMock } from '{{importPrefix}}test/mocks/db'
 import { redirect } from '{{importPrefix}}test/mocks/navigation'
 
-import { createPost } from './create-post'
+import { createPost } from './createPost'
 
 vi.mock('next/navigation', async () => import('{{importPrefix}}test/mocks/navigation'))
-vi.mock('{{libImport}}/database/db', async () => {
+vi.mock('{{databaseImport}}/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
@@ -857,17 +857,17 @@ function postsApiTest(ctx: TemplateContext) {
   return t(
     `import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getServerSideSession } from '{{libImport}}/server/get-session'
+import { getServerSideSession } from '{{libImport}}/server/getSession'
 import { postFactory, sessionFactory } from '{{importPrefix}}test/factories'
 import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import { GET } from './route'
 
-vi.mock('{{libImport}}/database/db', async () => {
+vi.mock('{{databaseImport}}/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
-vi.mock('{{libImport}}/server/get-session', async () => {
+vi.mock('{{libImport}}/server/getSession', async () => {
   const { getServerSideSession } = await import('{{importPrefix}}test/mocks/session')
   return { getServerSideSession }
 })
@@ -920,7 +920,7 @@ vi.mock('better-auth/next-js', () => ({
     POST: vi.fn(),
   })),
 }))
-vi.mock('{{libImport}}/auth/auth', () => ({
+vi.mock('{{authImport}}/auth', () => ({
   auth: { api: {} },
 }))
 
@@ -958,7 +958,7 @@ vi.mock('better-auth/next-js', () => ({
 vi.mock('better-auth/plugins', () => ({
   magicLink: vi.fn(() => 'magic-link'),
 }))
-vi.mock('{{libImport}}/env/env', () => ({
+vi.mock('{{envImport}}', () => ({
   env: {
     databaseUrl: 'postgresql://postgres:postgres@localhost:5432/test',
     betterAuthSecret: 'secret',
@@ -966,7 +966,7 @@ vi.mock('{{libImport}}/env/env', () => ({
     nodeEnv: 'test',
   },
 }))
-vi.mock('{{libImport}}/magic-link/dev-magic-link', () => ({
+vi.mock('{{authImport}}/devMagicLink', () => ({
   rememberMagicLink: vi.fn(),
 }))
 
@@ -1015,13 +1015,13 @@ vi.mock('better-auth/react', () => ({
     getSession: vi.fn(),
   })),
 }))
-vi.mock('{{libImport}}/env/env', () => ({
+vi.mock('{{envImport}}', () => ({
   env: {
     betterAuthUrl: 'http://localhost:3000',
   },
 }))
 
-describe('auth-client', () => {
+describe('authClient', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -1029,7 +1029,7 @@ describe('auth-client', () => {
 
   test('re-exports the Better Auth browser client', async () => {
     const { authClient, getSession, signIn, signOut, useSession } = await import(
-      './auth-client'
+      './authClient'
     )
 
     expect(magicLinkClient).toHaveBeenCalled()
@@ -1052,17 +1052,20 @@ describe('auth-client', () => {
 function devMagicLinkTest() {
   return `import { describe, expect, test } from 'vitest'
 
-import { rememberMagicLink, takeLastMagicLink } from './dev-magic-link'
+import { rememberMagicLink, takeLastMagicLink } from './devMagicLink'
 
-describe('dev-magic-link', () => {
+describe('devMagicLink', () => {
   test('returns the last stored url for the same email', () => {
     rememberMagicLink('ada@example.com', 'http://localhost:3000/link')
     expect(takeLastMagicLink('ada@example.com')).toBe('http://localhost:3000/link')
   })
 
-  test('ignores a url stored for a different email', () => {
-    rememberMagicLink('ada@example.com', 'http://localhost:3000/link')
-    expect(takeLastMagicLink('other@example.com')).toBeUndefined()
+  test('keeps links for parallel requests independent by email', () => {
+    rememberMagicLink('ada@example.com', 'http://localhost:3000/ada-link')
+    rememberMagicLink('grace@example.com', 'http://localhost:3000/grace-link')
+
+    expect(takeLastMagicLink('ada@example.com')).toBe('http://localhost:3000/ada-link')
+    expect(takeLastMagicLink('grace@example.com')).toBe('http://localhost:3000/grace-link')
   })
 })
 `
@@ -1074,7 +1077,7 @@ function getSessionTest(ctx: TemplateContext) {
 
 import { sessionFactory } from '{{importPrefix}}test/factories'
 
-import { getServerSideSession } from './get-session'
+import { getServerSideSession } from './getSession'
 
 const { getSession, headers } = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -1082,7 +1085,7 @@ const { getSession, headers } = vi.hoisted(() => ({
 }))
 
 vi.mock('next/headers', () => ({ headers }))
-vi.mock('{{libImport}}/auth/auth', () => ({
+vi.mock('{{authImport}}/auth', () => ({
   auth: { api: { getSession } },
 }))
 
@@ -1134,7 +1137,7 @@ describe('db', () => {
 function dbErrorTest() {
   return `import { describe, expect, test } from 'vitest'
 
-import { getDatabaseError, getDatabaseErrorInfo } from './db-error'
+import { getDatabaseError, getDatabaseErrorInfo } from './dbError'
 
 function postgresError(
   code: string,
@@ -1271,11 +1274,11 @@ import { dbMock, postQuery } from '{{importPrefix}}test/mocks/db'
 
 import { seed } from './seed'
 
-vi.mock('{{libImport}}/database/db', async () => {
+vi.mock('{{databaseImport}}/db', async () => {
   const { dbMock } = await import('{{importPrefix}}test/mocks/db')
   return { db: dbMock }
 })
-vi.mock('{{libImport}}/env/env', () => ({
+vi.mock('{{envImport}}', () => ({
   env: { databaseUrl: 'postgresql://postgres:postgres@localhost:5432/test' },
 }))
 
@@ -1324,7 +1327,7 @@ function resetTest(ctx: TemplateContext) {
   return t(
     `import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { env } from '{{libImport}}/env/env'
+import { env } from '{{envImport}}'
 
 import { resetDatabase } from './reset'
 
@@ -1344,7 +1347,7 @@ vi.mock('pg', () => ({
   }),
 }))
 
-vi.mock('{{libImport}}/env/env', () => ({
+vi.mock('{{envImport}}', () => ({
   env: envState,
 }))
 

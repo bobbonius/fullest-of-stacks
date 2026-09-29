@@ -1,16 +1,14 @@
 import type { ProjectContext } from '../lib/project.ts'
 
 export function viteConfig(ctx: ProjectContext) {
-  const root = ctx.srcRoot === '.' ? '' : `${ctx.srcRoot}/`
+  const appSrc = 'apps/web/src'
 
   return `import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
   plugins: [
     react(),
-    tsconfigPaths(),
     {
       name: 'stub-css',
       load(id: string): string | null {
@@ -24,22 +22,34 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',
-    include: ['**/*.{test,spec}.{ts,tsx}'],
+    include: [
+      'apps/**/*.{test,spec}.{ts,tsx}',
+      'packages/**/*.{test,spec}.{ts,tsx}',
+    ],
+    exclude: [
+      '**/node_modules/**',
+      '**/e2e/**',
+      '**/.next/**',
+      '**/dist/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: [
-        '${root}app/**/*.{ts,tsx}',
-        '${root}shared/libs/**/*.{ts,tsx}',
-        '${root}prisma/seed.ts',
-        '${root}prisma/reset.ts',
+        '${appSrc}/app/**/*.{ts,tsx}',
+        '${appSrc}/shared/libs/**/*.{ts,tsx}',
+        'packages/**/src/**/*.{ts,tsx}',
+        'packages/database/prisma/seed.ts',
+        'packages/database/prisma/reset.ts',
       ],
       exclude: [
         '**/*.test.{ts,tsx}',
-        '${root}test/**',
-        '${root}shared/components/ui/**',
-        '${root}prisma/contract.*',
-        '${root}prisma/db.ts',
+        '${appSrc}/test/**',
+        '${appSrc}/shared/components/ui/**',
+        'packages/database/prisma/contract.*',
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/e2e/**',
       ],
       thresholds: {
         lines: 90,
@@ -50,8 +60,9 @@ export default defineConfig({
     },
   },
   resolve: {
+    tsconfigPaths: true,
     alias: {
-      '${ctx.alias}': new URL('./${ctx.srcRoot === '.' ? '.' : ctx.srcRoot}', import.meta.url).pathname,
+      '${ctx.alias}': new URL('./${appSrc}', import.meta.url).pathname,
     },
   },
 })

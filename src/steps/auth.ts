@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { readOptional, writeText } from '../lib/fs.ts'
 import type { ProjectContext } from '../lib/project.ts'
-import { srcFile } from '../lib/project.ts'
+import { packageFile, srcFile } from '../lib/project.ts'
 import { addPackages } from '../lib/run.ts'
 import { t, toTemplateContext } from '../lib/template.ts'
 import { envExample } from '../templates/app.ts'
@@ -37,19 +37,19 @@ export function writeAuthFiles(ctx: ProjectContext) {
   const tpl = asTemplate(ctx)
   const secret = randomBytes(32).toString('base64')
 
-  writeText(srcFile(ctx, 'shared/libs/env/env.ts'), envModule())
-  writeText(srcFile(ctx, 'shared/libs/magic-link/dev-magic-link.ts'), devMagicLink())
-  writeText(srcFile(ctx, 'shared/libs/auth/auth.ts'), authServer(tpl))
-  writeText(srcFile(ctx, 'shared/libs/auth/auth-client.ts'), authClient(tpl))
-  writeText(srcFile(ctx, 'shared/libs/server/get-session.ts'), getSession(tpl))
-  writeText(srcFile(ctx, 'shared/libs/database/db-error.ts'), dbError())
-  writeText(srcFile(ctx, 'shared/libs/database/models.ts'), dbModels(tpl))
+  writeText(packageFile(ctx, 'env', 'src/env.ts'), envModule())
+  writeText(packageFile(ctx, 'auth', 'src/devMagicLink.ts'), devMagicLink())
+  writeText(packageFile(ctx, 'auth', 'src/auth.ts'), authServer(tpl))
+  writeText(packageFile(ctx, 'auth', 'src/authClient.ts'), authClient(tpl))
+  writeText(srcFile(ctx, 'shared/libs/server/getSession.ts'), getSession(tpl))
+  writeText(packageFile(ctx, 'database', 'src/dbError.ts'), dbError())
+  writeText(packageFile(ctx, 'database', 'src/models.ts'), dbModels(tpl))
   writeText(srcFile(ctx, 'app/api/auth/[...all]/route.ts'), authRoute(tpl))
 
   if (ctx.prismaDbPath) {
-    writeText(srcFile(ctx, 'shared/libs/database/db.ts'), dbReexport(tpl))
+    writeText(packageFile(ctx, 'database', 'src/db.ts'), dbReexport(tpl))
   } else {
-    writeText(srcFile(ctx, 'shared/libs/database/db.ts'), dbFallback(tpl))
+    writeText(packageFile(ctx, 'database', 'src/db.ts'), dbFallback(tpl))
   }
 
   const envContents = t(envExample(), tpl)
@@ -58,6 +58,12 @@ export function writeAuthFiles(ctx: ProjectContext) {
     path.join(ctx.projectDir, '.env.local'),
     envContents.replace('replace-with-a-32-char-secret', secret)
   )
+  // Next.js also reads env from the app directory when started via apps/web.
+  writeText(
+    path.join(ctx.appRoot, '.env.local'),
+    envContents.replace('replace-with-a-32-char-secret', secret)
+  )
+  writeText(path.join(ctx.appRoot, '.env.example'), envContents)
   patchDotenvDatabaseUrl(ctx.projectDir, ctx.databaseUrl)
 }
 

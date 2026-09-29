@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
+import { ensurePnpmAllowBuilds } from './pnpm.ts'
 import { restoreTerminal } from './tty.ts'
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'
@@ -62,6 +65,14 @@ export function prismaDlx(pm: PackageManager): { command: string; args: string[]
   return { command: 'npx', args: ['--yes', 'prisma@latest'] }
 }
 
+function withLatest(pkg: string) {
+  if (pkg.startsWith('@')) {
+    // @scope/name or @scope/name@version
+    return pkg.slice(1).includes('@') ? pkg : `${pkg}@latest`
+  }
+  return pkg.includes('@') ? pkg : `${pkg}@latest`
+}
+
 export async function addPackages(
   pm: PackageManager,
   cwd: string,
@@ -70,25 +81,35 @@ export async function addPackages(
 ) {
   if (packages.length === 0) return
 
-  const specs = packages.map(pkg => (pkg.includes('@') ? pkg : `${pkg}@latest`))
+  const specs = packages.map(withLatest)
 
   switch (pm) {
-    case 'pnpm':
+    case 'pnpm': {
+      // pnpm workspaces refuse root adds unless -w is explicit.
+      const workspaceRoot = existsSync(path.join(cwd, 'pnpm-workspace.yaml'))
       await run(
         'pnpm',
         [
           'add',
+          ...(workspaceRoot ? ['-w'] : []),
           '--allow-build=esbuild',
           '--allow-build=msgpackr-extract',
           '--allow-build=workerd',
           '--allow-build=sharp',
           '--allow-build=unrs-resolver',
+          '--allow-build=@swc/core',
+          '--allow-build=nx',
           ...(dev ? ['-D'] : []),
           ...specs,
         ],
         cwd
       )
+      if (workspaceRoot) {
+        // pnpm may re-introduce allowBuilds placeholders after an add.
+        ensurePnpmAllowBuilds(cwd)
+      }
       break
+    }
     case 'yarn':
       await run('yarn', ['add', ...(dev ? ['--dev'] : []), ...specs], cwd)
       break

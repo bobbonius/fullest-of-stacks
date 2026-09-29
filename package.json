@@ -1,7 +1,7 @@
 {
   "name": "fullest-of-stacks",
   "version": "0.1.0",
-  "description": "Scaffold a full-stack Next.js app with shadcn, Prisma 8, Better Auth, Vitest, Zod, ESLint, and Prettier.",
+  "description": "Scaffold an Nx monorepo with a Next.js app, workspace packages, shadcn, Prisma 8, Better Auth, Vitest, Zod, ESLint, and Prettier.",
   "type": "module",
   "bin": {
     "fullest-of-stacks": "./bin/fullest-of-stacks.js"

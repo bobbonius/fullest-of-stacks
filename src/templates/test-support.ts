@@ -7,7 +7,7 @@ export function testSupportFiles(ctx: TemplateContext) {
     'test/mocks/db.ts': dbMock(),
     'test/mocks/session.ts': sessionMock(),
     'test/mocks/navigation.ts': navigationMock(),
-    'test/mocks/auth-client.ts': authClientMock(),
+    'test/mocks/authClient.ts': authClientMock(),
   } satisfies Record<string, string>
 }
 
@@ -15,7 +15,7 @@ function factories(ctx: TemplateContext) {
   return t(
     `import { factory, seq } from '@factory-js/factory'
 
-import type { Post, User } from '{{libImport}}/database/models'
+import type { Post, User } from '{{databaseImport}}/models'
 
 interface AuthSession {
   user: User

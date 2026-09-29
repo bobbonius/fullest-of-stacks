@@ -3,6 +3,9 @@ export type TemplateContext = {
   alias: string
   importPrefix: string
   libImport: string
+  envImport: string
+  databaseImport: string
+  authImport: string
   utilsImport: string
   uiImport: string
   prismaDbImport: string
@@ -18,6 +21,9 @@ export function toTemplateContext(ctx: TemplateContext): TemplateContext {
     alias: ctx.alias,
     importPrefix: ctx.importPrefix,
     libImport: ctx.libImport,
+    envImport: ctx.envImport,
+    databaseImport: ctx.databaseImport,
+    authImport: ctx.authImport,
     utilsImport: ctx.utilsImport,
     uiImport: ctx.uiImport,
     prismaDbImport: ctx.prismaDbImport,
@@ -34,6 +40,9 @@ export function t(template: string, ctx: TemplateContext) {
     .replaceAll('{{alias}}', ctx.alias)
     .replaceAll('{{importPrefix}}', ctx.importPrefix)
     .replaceAll('{{libImport}}', ctx.libImport)
+    .replaceAll('{{envImport}}', ctx.envImport)
+    .replaceAll('{{databaseImport}}', ctx.databaseImport)
+    .replaceAll('{{authImport}}', ctx.authImport)
     .replaceAll('{{utilsImport}}', ctx.utilsImport)
     .replaceAll('{{uiImport}}', ctx.uiImport)
     .replaceAll('{{prismaDbImport}}', ctx.prismaDbImport)

@@ -2,7 +2,7 @@ import { unlinkSync } from 'node:fs'
 import path from 'node:path'
 
 import { exists, writeJson, writeText } from '../lib/fs.ts'
-import { mergeScripts, type ProjectContext, srcFile } from '../lib/project.ts'
+import { mergeScripts, type ProjectContext } from '../lib/project.ts'
 import { addPackages } from '../lib/run.ts'
 import { eslintConfig } from '../templates/eslint.ts'
 import { prettierIgnore, prettierRc } from '../templates/prettier.ts'
@@ -24,7 +24,6 @@ export async function installTooling(ctx: ProjectContext) {
       '@factory-js/factory',
       '@vitest/coverage-v8',
       'vite',
-      'vite-tsconfig-paths',
       'eslint',
       'eslint-config-next',
       'eslint-config-prettier',
@@ -48,6 +47,7 @@ export async function installTooling(ctx: ProjectContext) {
       '@eslint/eslintrc',
       '@types/pg',
       'tsx',
+      '@playwright/test',
     ],
     true
   )
@@ -64,13 +64,19 @@ export function writeToolingConfigs(ctx: ProjectContext) {
   writeText(path.join(ctx.projectDir, 'vitest.config.ts'), viteConfig(ctx))
   writeText(path.join(ctx.projectDir, 'vitest.setup.ts'), vitestSetup)
 
-  const seedFile = ctx.srcRoot === '.' ? 'prisma/seed.ts' : 'src/prisma/seed.ts'
-  const resetFile = ctx.srcRoot === '.' ? 'prisma/reset.ts' : 'src/prisma/reset.ts'
+  const seedFile = 'packages/database/prisma/seed.ts'
+  const resetFile = 'packages/database/prisma/reset.ts'
 
   const pkg = mergeScripts(ctx.projectDir, {
+    dev: 'nx dev web',
+    build: 'nx build web',
+    start: 'nx start web',
     test: 'vitest run',
     'test:watch': 'vitest',
     'test:coverage': 'vitest run --coverage',
+    'test:e2e': 'playwright test',
+    'test:e2e:ui': 'playwright test --ui',
+    'test:e2e:install': 'playwright install chromium',
     lint: 'eslint .',
     'lint:fix': 'eslint . --fix',
     'format:write': 'prettier --write "**/*.{ts,tsx,mjs,json,css,md}" --cache',
@@ -83,33 +89,4 @@ export function writeToolingConfigs(ctx: ProjectContext) {
   pkg.engines = { ...pkg.engines, node: '>=24' }
 
   writeJson(path.join(ctx.projectDir, 'package.json'), pkg)
-
-  writeText(
-    srcFile(ctx, 'shared/libs/utils/slugify.ts'),
-    `export function slugify(value: string): string {
-  return String(value)
-    .normalize('NFKD')
-    .replace(/[\\u0300-\\u036f]/g, '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-`
-  )
-
-  writeText(
-    srcFile(ctx, 'shared/libs/utils/slugify.test.ts'),
-    `import { describe, expect, test } from 'vitest'
-
-import { slugify } from './slugify'
-
-describe('slugify', () => {
-  test('turns a title into a url slug', () => {
-    expect(slugify('Hello, Fullest of Stacks!')).toBe('hello-fullest-of-stacks')
-  })
-})
-`
-  )
 }

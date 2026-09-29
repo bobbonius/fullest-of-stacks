@@ -19,10 +19,12 @@ import {
   runScript,
 } from './lib/run.ts'
 import { installAuth, writeAuthFiles } from './steps/auth.ts'
-import { runCreateNextApp } from './steps/nextjs.ts'
+import { runCreateNxWorkspace } from './steps/nx.ts'
+import { writeWorkspacePackages } from './steps/packages.ts'
 import { emitPrismaContract, overlayPrismaContract, runPrismaInit } from './steps/prisma.ts'
 import { writeScaffold } from './steps/scaffold.ts'
 import { addShadcnComponents, relocateSharedCode, runShadcnInit } from './steps/shadcn.ts'
+import { ensureTailwind } from './steps/tailwind.ts'
 import { installTooling, writeToolingConfigs } from './steps/tooling.ts'
 
 type CliOptions = {
@@ -75,7 +77,9 @@ function printHelp() {
   console.log(`
 ${pc.bold('fullest-of-stacks')}
 
-Scaffold a full-stack Next.js app using the official CLIs for Next.js, shadcn, and Prisma 8.
+Scaffold an Nx monorepo with a Next.js app, workspace packages for env /
+database / auth / utils, shadcn, Prisma 8, Better Auth, Vitest, Zod, ESLint,
+and Prettier.
 
 Requires Node.js 24+.
 
@@ -84,8 +88,8 @@ ${pc.bold('Usage')}
   pnpm dlx github:bobbonius/fullest-of-stacks [name]
 
 ${pc.bold('Options')}
-  --yes, -y       Recommended answers for Next.js, shadcn, and Prisma (still asks Postgres port and database name)
-  --pnpm          Use pnpm
+  --yes, -y       Recommended answers for Nx, shadcn, and Prisma (still asks Postgres port and database name)
+  --pnpm          Use pnpm (recommended for the monorepo)
   --npm           Use npm
   --yarn          Use yarn
   --bun           Use bun
@@ -117,7 +121,9 @@ async function main() {
 
   console.log()
   p.intro(pc.bgMagenta(pc.black(' fullest-of-stacks ')))
-  p.log.message('Next.js, shadcn, Prisma 8, Better Auth, Vitest, Zod, ESLint, and Prettier.')
+  p.log.message(
+    'Nx monorepo · Next.js · shadcn · Prisma 8 · Better Auth · Vitest · Zod · ESLint · Prettier'
+  )
 
   const packageManager =
     options.packageManager ??
@@ -127,7 +133,7 @@ async function main() {
           await p.select({
             message: 'Package manager',
             options: [
-              { value: 'pnpm', label: 'pnpm' },
+              { value: 'pnpm', label: 'pnpm (recommended)' },
               { value: 'npm', label: 'npm' },
               { value: 'yarn', label: 'yarn' },
               { value: 'bun', label: 'bun' },
@@ -142,18 +148,23 @@ async function main() {
       ? 'fullest-app'
       : assertNotCancelled(
           await p.text({
-            message: 'Project name',
+            message: 'Workspace name',
             placeholder: 'fullest-app',
             defaultValue: 'fullest-app',
             validate: value => {
-              if (!value?.trim()) return 'A project name is required'
+              if (!value?.trim()) return 'A workspace name is required'
+              if (value.trim() === '.') return 'In-place (.) is not supported for the Nx monorepo scaffold'
             },
           })
         ))
 
+  if (projectName === '.') {
+    p.cancel('In-place (.) is not supported for the Nx monorepo scaffold.')
+    process.exit(1)
+  }
+
   const cwd = process.cwd()
-  const inPlace = projectName === '.'
-  const projectDir = inPlace ? cwd : path.join(cwd, projectName)
+  const projectDir = path.join(cwd, projectName)
   const suggestedDatabaseName = defaultDatabaseName(projectName, cwd)
 
   p.log.message(
@@ -182,33 +193,38 @@ async function main() {
 
   const database = createDatabaseConfig(databasePort, databaseName)
 
-  if (!inPlace && exists(projectDir)) {
+  if (exists(projectDir)) {
     p.cancel(`Directory already exists: ${projectDir}`)
     process.exit(1)
   }
 
-  p.log.step('1/7  Next.js')
-  await runCreateNextApp({
+  p.log.step('1/8  Nx workspace + Next.js app')
+  await runCreateNxWorkspace({
     projectName,
     cwd,
     packageManager,
     yes: options.yes,
   })
 
-  if (!exists(path.join(projectDir, 'package.json'))) {
-    p.cancel('create-next-app did not produce a package.json. Stopped.')
+  if (!exists(path.join(projectDir, 'nx.json'))) {
+    p.cancel('create-nx-workspace did not produce nx.json. Stopped.')
     process.exit(1)
   }
 
-  const inspect = (name = inPlace ? path.basename(cwd) : projectName) =>
+  const inspect = (name = projectName) =>
     inspectProject(projectDir, name, packageManager, database)
 
   let ctx = inspect()
   ensurePnpmAllowBuilds(projectDir)
 
-  p.log.step('2/7  shadcn/ui')
+  p.log.step('2/8  Workspace packages (env, database, auth, utils)')
+  await writeWorkspacePackages(ctx)
+  ctx = inspect(ctx.projectName)
+
+  p.log.step('3/8  shadcn/ui')
+  await ensureTailwind(ctx)
   await runShadcnInit({
-    projectDir,
+    appRoot: ctx.appRoot,
     packageManager: ctx.packageManager,
     yes: options.yes,
   })
@@ -216,11 +232,11 @@ async function main() {
   relocateSharedCode(ctx)
   ctx = inspect(ctx.projectName)
 
-  p.log.step('3/7  Prisma 8')
+  p.log.step('4/8  Prisma 8')
   await runPrismaInit({
     projectDir,
     packageManager: ctx.packageManager,
-    srcDir: ctx.srcDir,
+    schemaPath: 'packages/database/prisma/contract.ts',
   })
   p.log.success('Prisma init finished — continuing the scaffold')
   ctx = inspect(ctx.projectName)
@@ -228,22 +244,22 @@ async function main() {
   ctx = inspect(ctx.projectName)
   await emitPrismaContract(ctx)
 
-  p.log.step('4/7  Prettier, ESLint, Vitest, Zod')
+  p.log.step('5/8  Prettier, ESLint, Vitest, Zod')
   await installTooling(ctx)
   writeToolingConfigs(ctx)
 
-  p.log.step('5/7  Better Auth')
+  p.log.step('6/8  Better Auth')
   await installAuth(ctx)
   writeAuthFiles(ctx)
 
-  p.log.step('6/7  shadcn components')
+  p.log.step('7/8  shadcn components')
   await addShadcnComponents({
-    projectDir,
+    appRoot: ctx.appRoot,
     packageManager: ctx.packageManager,
   })
   ctx = inspect(ctx.projectName)
 
-  p.log.step('7/7  Routes, schemas, and mocks')
+  p.log.step('8/8  Routes, schemas, and mocks')
   writeScaffold(ctx)
 
   try {
@@ -252,9 +268,17 @@ async function main() {
     // Formatting is best-effort; the app is still usable if Prettier is not on PATH yet.
   }
 
+  try {
+    await runScript(ctx.packageManager, 'test:e2e:install', projectDir)
+  } catch {
+    p.log.warn(
+      'Playwright browser install skipped. Run test:e2e:install before test:e2e.'
+    )
+  }
+
   p.note(
     [
-      inPlace ? 'cd into this directory if you are not already here' : `cd ${projectName}`,
+      `cd ${projectName}`,
       `DATABASE_URL is in .env.local (${database.databaseUrl})`,
       `${ctx.packageManager} db:init`,
       `${ctx.packageManager} db:seed`,
@@ -263,11 +287,13 @@ async function main() {
       `${ctx.packageManager} dev`,
       `${ctx.packageManager} test`,
       `${ctx.packageManager} test:coverage`,
+      `${ctx.packageManager} test:e2e:install   # once: download Chromium`,
+      `${ctx.packageManager} test:e2e`,
     ].join('\n'),
     'Next steps'
   )
 
-  p.outro(pc.green('Fullest of stacks is ready.'))
+  p.outro(pc.green('Fullest of stacks monorepo is ready.'))
 }
 
 main().catch(error => {
